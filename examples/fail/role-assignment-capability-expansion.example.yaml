@@ -1,0 +1,34 @@
+schema_version: "0.2.0"
+record_type: federation_operational_role_assignment
+assignment_id: urn:royalty-role-assignment:kazene:invalid:capability-expansion
+activation_receipt:
+  receipt_id: urn:royalty-activation-receipt:kazene:royalty-lab:origin-operation:v0.1
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab
+  resolution_status: resolved
+federation_id: urn:royalty-federation:kazene:royalty-network
+cell_id: urn:royalty-cell:kazene:royalty-lab
+role_id: independent-auditor
+role_type: auditor
+assigned_capabilities:
+  - audit_records
+  - execute_settlement
+authority_scope_ref: urn:royalty-authority-scope:kazene:audit:v1
+assignment_mode: primary
+assignment_status: active
+duty_window:
+  start_at: "2026-07-25T15:00:00+09:00"
+effective_at: "2026-07-25T15:00:00+09:00"
+decision:
+  decided_by_refs: [urn:royalty-federation-member:kazene:coordinator]
+  decided_at: "2026-07-25T14:40:00+09:00"
+  policy_ref: urn:royalty-operations-policy:kazene:role-assignment:v1
+  authorization_ref: urn:authorization:kazene:invalid-capability:v0.2
+  rationale: Intentionally expands authority.
+assignment_effect: operational_role_assignment_only
+issued_at: "2026-07-25T14:45:00+09:00"
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:invalid-role-capability
+    evidence_type: activation_receipt
+    evidence_ref: urn:royalty-activation-receipt:kazene:royalty-lab:origin-operation:v0.1
+    recorded_at: "2026-07-25T14:45:00+09:00"
+visibility: restricted
