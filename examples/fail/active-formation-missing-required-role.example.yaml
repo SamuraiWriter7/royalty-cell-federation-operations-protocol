@@ -1,0 +1,39 @@
+schema_version: "0.3.0"
+record_type: federation_formation_record
+formation_id: urn:royalty-formation:kazene:missing-required-role:v0.3
+federation_id: urn:royalty-federation:kazene:royalty-network
+formation_name: Invalid Missing Role Formation
+formation_type: serial
+formation_status: active
+objective: Intentionally omit the required auditor role.
+participating_nodes:
+  - node_id: origin-core
+    assignment:
+      assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:origin-authority:v0.2
+      source_cell_id: urn:royalty-cell:kazene:royalty-lab
+      resolution_status: resolved
+    operational_position: core
+    node_status: active
+connections: []
+required_role_types:
+  - origin_authority
+  - auditor
+coordination_policy:
+  coordinator_refs:
+    - urn:royalty-federation-member:kazene:coordinator
+  decision_policy_ref: urn:royalty-operations-policy:kazene:formation-governance:v1
+  quorum: 1
+fallback_policy:
+  enabled: false
+  trigger_types: []
+  fallback_node_ids: []
+  policy_ref: urn:royalty-operations-policy:kazene:formation-fallback:v1
+formation_effect: formation_record_only
+created_at: "2026-07-25T16:00:00+09:00"
+activated_at: "2026-07-25T16:01:00+09:00"
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:formation:missing-role:v0.3
+    evidence_type: formation_plan
+    evidence_ref: urn:royalty-formation-plan:kazene:missing-role:v0.3
+    recorded_at: "2026-07-25T16:00:00+09:00"
+visibility: restricted
