@@ -1,0 +1,512 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://royalty-cell-federation-operations-protocol.example/schemas/authority-scope-binding.schema.json",
+  "title": "Federation Authority Scope Binding",
+  "description": "Binds an Operational Role Assignment to explicit capability, record, route, resource, value, time, and delegation limits.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "binding_id",
+    "assignment",
+    "federation_id",
+    "cell_id",
+    "role_id",
+    "binding_status",
+    "permitted_capabilities",
+    "prohibited_capabilities",
+    "resource_scope",
+    "record_scope",
+    "route_scope",
+    "time_window",
+    "delegation_policy",
+    "constraints",
+    "decision",
+    "binding_effect",
+    "issued_at",
+    "evidence",
+    "visibility"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.2.0"
+    },
+    "record_type": {
+      "const": "federation_authority_scope_binding"
+    },
+    "binding_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-authority-binding:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "assignment": {
+      "$ref": "#/$defs/assignmentRef"
+    },
+    "federation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-federation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "cell_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "role_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$"
+    },
+    "binding_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "prepared",
+        "active",
+        "suspended",
+        "revoked",
+        "expired"
+      ]
+    },
+    "permitted_capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/capability"
+      }
+    },
+    "prohibited_capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/capability"
+      }
+    },
+    "resource_scope": {
+      "$ref": "#/$defs/resourceScope"
+    },
+    "record_scope": {
+      "$ref": "#/$defs/recordScope"
+    },
+    "route_scope": {
+      "$ref": "#/$defs/routeScope"
+    },
+    "value_limits": {
+      "$ref": "#/$defs/valueLimits"
+    },
+    "time_window": {
+      "$ref": "#/$defs/timeWindow"
+    },
+    "delegation_policy": {
+      "$ref": "#/$defs/delegationPolicy"
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/constraint"
+      }
+    },
+    "effective_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "suspended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expired_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3000
+    },
+    "decision": {
+      "$ref": "#/$defs/decision"
+    },
+    "binding_effect": {
+      "const": "authority_scope_binding_only"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "members",
+        "restricted"
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "record_origin",
+        "declare_usage",
+        "resolve_derivative",
+        "recognize_contribution",
+        "resolve_weights",
+        "approve_allocation",
+        "execute_settlement",
+        "audit_records",
+        "resolve_disputes",
+        "manage_holdbacks",
+        "manage_interoperability",
+        "coordinate_federation",
+        "emergency_suspend",
+        "other"
+      ]
+    },
+    "assignmentRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignment_id",
+        "source_cell_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "assignment_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "source_cell_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "resourceScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "allowed_refs",
+        "denied_refs"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "all_authorized",
+            "listed_only",
+            "none"
+          ]
+        },
+        "allowed_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        },
+        "denied_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        }
+      }
+    },
+    "recordScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_record_types",
+        "allowed_operations"
+      ],
+      "properties": {
+        "allowed_record_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "manifest",
+              "origin",
+              "usage",
+              "derivative",
+              "contribution",
+              "weight_resolution",
+              "allocation_plan",
+              "royalty_receipt",
+              "interoperability_link",
+              "dispute",
+              "holdback",
+              "operation_record",
+              "other"
+            ]
+          }
+        },
+        "allowed_operations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "read",
+              "create",
+              "update",
+              "approve",
+              "execute",
+              "audit",
+              "suspend",
+              "handoff",
+              "other"
+            ]
+          }
+        }
+      }
+    },
+    "routeScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_route_refs",
+        "denied_route_refs"
+      ],
+      "properties": {
+        "allowed_route_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        },
+        "denied_route_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        }
+      }
+    },
+    "valueLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit_code",
+        "per_event_max"
+      ],
+      "properties": {
+        "unit_code": {
+          "type": "string",
+          "pattern": "^[A-Z0-9][A-Z0-9._-]{0,31}$"
+        },
+        "per_event_max": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cumulative_max": {
+          "type": "number",
+          "minimum": 0
+        },
+        "period": {
+          "type": "string",
+          "enum": [
+            "operation",
+            "hour",
+            "day",
+            "week",
+            "month"
+          ]
+        }
+      }
+    },
+    "timeWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_at"
+      ],
+      "properties": {
+        "start_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "delegationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "prohibited",
+            "explicit",
+            "policy_based"
+          ]
+        },
+        "delegate_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        },
+        "policy_ref": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "constraint_id",
+        "constraint_type",
+        "description",
+        "policy_ref"
+      ],
+      "properties": {
+        "constraint_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "constraint_type": {
+          "type": "string",
+          "enum": [
+            "human_review",
+            "dual_control",
+            "audit_before_action",
+            "rate_limit",
+            "value_limit",
+            "route_limit",
+            "data_minimization",
+            "other"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        },
+        "policy_ref": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decided_by_refs",
+        "decided_at",
+        "policy_ref",
+        "authorization_ref",
+        "rationale"
+      ],
+      "properties": {
+        "decided_by_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "policy_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "authorization_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "evidence_type",
+        "evidence_ref",
+        "recorded_at"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-evidence:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "role_assignment",
+            "authority_policy",
+            "authorization_record",
+            "scope_assessment",
+            "signed_statement",
+            "other"
+          ]
+        },
+        "evidence_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    }
+  }
+}
