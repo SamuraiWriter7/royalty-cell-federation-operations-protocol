@@ -1,0 +1,399 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://royalty-cell-federation-operations-protocol.example/schemas/cell-recovery-assessment.schema.json",
+  "title": "Federation Cell Recovery Assessment",
+  "description": "Assesses whether an isolated formation node is ready for limited or full reactivation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "recovery_assessment_id",
+    "federation_id",
+    "incident",
+    "formation",
+    "isolation_order",
+    "route_suspensions",
+    "target_node",
+    "recovery_requirements",
+    "checks",
+    "recovery_status",
+    "recommended_action",
+    "assessed_by_refs",
+    "assessed_at",
+    "valid_until",
+    "blockers",
+    "conditions",
+    "assessment_effect",
+    "evidence",
+    "visibility"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.4.0"
+    },
+    "record_type": {
+      "const": "federation_cell_recovery_assessment"
+    },
+    "recovery_assessment_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-recovery-assessment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "federation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-federation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "incident": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "incident_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "incident_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-incident:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        }
+      }
+    },
+    "formation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "formation_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "formation_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-formation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        }
+      }
+    },
+    "isolation_order": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "isolation_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "isolation_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-isolation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        }
+      }
+    },
+    "route_suspensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "route_suspension_id",
+          "resolution_status"
+        ],
+        "properties": {
+          "route_suspension_id": {
+            "type": "string",
+            "pattern": "^urn:royalty-route-suspension:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+          },
+          "resolution_status": {
+            "type": "string",
+            "enum": [
+              "resolved",
+              "externally_resolved",
+              "unresolved"
+            ]
+          },
+          "record_ref": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        }
+      }
+    },
+    "target_node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "assignment_id"
+      ],
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "assignment_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        }
+      }
+    },
+    "recovery_requirements": {
+      "$ref": "#/$defs/recoveryRequirements"
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    },
+    "recovery_status": {
+      "type": "string",
+      "enum": [
+        "not_ready",
+        "conditionally_ready",
+        "ready"
+      ]
+    },
+    "recommended_action": {
+      "type": "string",
+      "enum": [
+        "keep_isolated",
+        "reactivate_limited",
+        "reactivate_full",
+        "replace_cell",
+        "retire_cell"
+      ]
+    },
+    "assessed_by_refs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 1000
+      }
+    },
+    "assessed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "blockers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 3000
+      }
+    },
+    "conditions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 3000
+      }
+    },
+    "assessment_effect": {
+      "const": "recovery_assessment_only"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "members",
+        "restricted"
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "recoveryRequirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_capabilities",
+        "require_audit_clearance",
+        "require_security_clearance",
+        "route_revalidation_required"
+      ],
+      "properties": {
+        "required_capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "require_audit_clearance": {
+          "type": "boolean"
+        },
+        "require_security_clearance": {
+          "type": "boolean"
+        },
+        "route_revalidation_required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_id",
+        "category",
+        "required",
+        "status",
+        "subject_ref"
+      ],
+      "properties": {
+        "check_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "manifest_integrity",
+            "activation_validity",
+            "assignment_validity",
+            "authority_scope",
+            "capability_test",
+            "data_integrity",
+            "audit_clearance",
+            "route_compatibility",
+            "security_clearance",
+            "capacity",
+            "other"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        "subject_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        },
+        "capability": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "evidence_type",
+        "evidence_ref",
+        "recorded_at"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-evidence:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "incident_observation",
+            "monitoring_record",
+            "audit_record",
+            "isolation_order",
+            "route_state",
+            "recovery_test",
+            "security_assessment",
+            "capacity_report",
+            "decision_record",
+            "external_reference",
+            "other"
+          ]
+        },
+        "evidence_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    }
+  }
+}
