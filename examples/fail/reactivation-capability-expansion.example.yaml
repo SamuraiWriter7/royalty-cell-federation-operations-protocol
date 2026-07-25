@@ -1,0 +1,49 @@
+schema_version: 0.4.0
+record_type: federation_cell_reactivation_receipt
+reactivation_id: urn:royalty-reactivation:kazene:capability-expansion:v0.4
+federation_id: urn:royalty-federation:kazene:royalty-network
+recovery_assessment:
+  recovery_assessment_id: urn:royalty-recovery-assessment:kazene:primary-auditor:v0.4
+  resolution_status: resolved
+  record_ref: examples/pass/cell-recovery-assessment.example.yaml
+incident:
+  incident_id: urn:royalty-incident:kazene:primary-auditor:authority-drift:v0.4
+  resolution_status: resolved
+  record_ref: examples/pass/operational-incident-record.example.yaml
+formation:
+  formation_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  resolution_status: resolved
+  record_ref: examples/pass/federation-formation-record.example.yaml
+isolation_order:
+  isolation_id: urn:royalty-isolation:kazene:primary-auditor:v0.4
+  resolution_status: resolved
+  record_ref: examples/pass/cell-isolation-order.example.yaml
+target_node:
+  node_id: audit-perimeter
+  assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+reactivation_mode: full
+reactivated_capabilities:
+- audit_records
+- emergency_suspend
+- execute_settlement
+restored_route_ids:
+- urn:royalty-value-route:kazene:origin-routing:v0.3
+conditions: []
+reactivation_status: activated
+decision:
+  decided_by_refs:
+  - urn:royalty-federation-member:kazene:coordinator
+  decided_at: '2026-07-25T17:01:00+09:00'
+  policy_ref: urn:royalty-operations-policy:kazene:reactivation:v1
+  authorization_ref: urn:authorization:kazene:primary-auditor-reactivation:v0.4
+  rationale: Reactivate the primary auditor after the isolation was lifted and the
+    recovery assessment returned ready.
+receipt_effect: reactivation_record_only
+issued_at: '2026-07-25T17:02:00+09:00'
+effective_at: '2026-07-25T17:03:00+09:00'
+evidence:
+- evidence_id: urn:royalty-evidence:kazene:reactivation:primary-auditor:v0.4
+  evidence_type: decision_record
+  evidence_ref: urn:royalty-reactivation-decision:kazene:primary-auditor:v0.4
+  recorded_at: '2026-07-25T17:02:00+09:00'
+visibility: public
