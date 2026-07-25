@@ -1,0 +1,364 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://royalty-cell-federation-operations-protocol.example/schemas/cell-route-decision-receipt.schema.json",
+  "title": "Cell Route Decision Receipt",
+  "description": "Compares candidate node paths within one active federation formation and records an approved route selection without executing the route.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "route_decision_id",
+    "formation",
+    "federation_id",
+    "operation_id",
+    "route_type",
+    "route_requirements",
+    "candidate_routes",
+    "decision_status",
+    "decision_effect",
+    "issued_at",
+    "evidence",
+    "visibility"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.3.0"
+    },
+    "record_type": {
+      "const": "federation_cell_route_decision_receipt"
+    },
+    "route_decision_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-route-decision:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "formation": {
+      "$ref": "#/$defs/formationRef"
+    },
+    "federation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-federation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-operation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "route_type": {
+      "type": "string",
+      "enum": [
+        "origin_flow",
+        "usage_flow",
+        "derivative_flow",
+        "contribution_flow",
+        "allocation_flow",
+        "settlement_flow",
+        "audit_flow",
+        "dispute_flow",
+        "mixed"
+      ]
+    },
+    "route_requirements": {
+      "$ref": "#/$defs/requirements"
+    },
+    "candidate_routes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/candidate"
+      }
+    },
+    "selected_candidate_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$"
+    },
+    "fallback_candidate_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$"
+    },
+    "selection_override_ref": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "decision_status": {
+      "type": "string",
+      "enum": [
+        "proposed",
+        "approved",
+        "rejected",
+        "revoked"
+      ]
+    },
+    "decision": {
+      "$ref": "#/$defs/decision"
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revocation_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3000
+    },
+    "decision_effect": {
+      "const": "route_decision_only"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "members",
+        "restricted"
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "formationRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "formation_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "formation_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-formation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        }
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_role_types",
+        "required_capabilities",
+        "max_hops",
+        "audit_required",
+        "fallback_required"
+      ],
+      "properties": {
+        "required_role_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "origin_authority",
+              "usage_router",
+              "derivative_registry",
+              "contribution_reviewer",
+              "allocator",
+              "settlement_executor",
+              "auditor",
+              "dispute_handler",
+              "coordinator",
+              "reserve",
+              "fallback",
+              "other"
+            ]
+          }
+        },
+        "required_capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "record_origin",
+              "declare_usage",
+              "resolve_derivative",
+              "recognize_contribution",
+              "resolve_weights",
+              "approve_allocation",
+              "execute_settlement",
+              "audit_records",
+              "resolve_disputes",
+              "manage_holdbacks",
+              "manage_interoperability",
+              "coordinate_federation",
+              "emergency_suspend",
+              "other"
+            ]
+          }
+        },
+        "max_hops": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "audit_required": {
+          "type": "boolean"
+        },
+        "fallback_required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "node_path",
+        "candidate_status",
+        "score",
+        "rationale"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "node_path": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9._-]*$"
+          }
+        },
+        "candidate_status": {
+          "type": "string",
+          "enum": [
+            "eligible",
+            "rejected"
+          ]
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        },
+        "rejection_reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decided_by_refs",
+        "decided_at",
+        "policy_ref",
+        "authorization_ref",
+        "rationale"
+      ],
+      "properties": {
+        "decided_by_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "policy_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        },
+        "authorization_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "evidence_type",
+        "evidence_ref",
+        "recorded_at"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-evidence:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "formation_record",
+            "candidate_evaluation",
+            "authorization_record",
+            "audit_record",
+            "signed_statement",
+            "other"
+          ]
+        },
+        "evidence_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    }
+  }
+}
