@@ -1,0 +1,1308 @@
+#!/usr/bin/env python3
+"""
+Validate Royalty Cell Federation Operations Protocol examples.
+
+Supported v0.1 records:
+
+- Federation Cell Activation Request
+- Federation Cell Readiness Assessment
+- Federation Cell Activation Receipt
+- Federation Cell Suspension Receipt
+
+Validation stages:
+
+1. YAML loading
+2. Record-type-specific JSON Schema validation
+3. Record-type-specific semantic validation
+4. Local cross-record reference validation
+5. Lifecycle, role, capability, and time-order validation
+
+Files under examples/pass must pass every validation stage.
+Files under examples/fail must fail at least one validation stage.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import yaml
+from jsonschema import Draft202012Validator, FormatChecker
+
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+PASS_DIR = ROOT_DIR / "examples" / "pass"
+FAIL_DIR = ROOT_DIR / "examples" / "fail"
+
+SCHEMA_PATHS = {
+    "federation_cell_activation_request": (
+        ROOT_DIR / "schemas" / "cell-activation-request.schema.json"
+    ),
+    "federation_cell_readiness_assessment": (
+        ROOT_DIR / "schemas" / "cell-readiness-assessment.schema.json"
+    ),
+    "federation_cell_activation_receipt": (
+        ROOT_DIR / "schemas" / "cell-activation-receipt.schema.json"
+    ),
+    "federation_cell_suspension_receipt": (
+        ROOT_DIR / "schemas" / "cell-suspension-receipt.schema.json"
+    ),
+}
+
+ID_FIELDS = {
+    "federation_cell_activation_request": "request_id",
+    "federation_cell_readiness_assessment": "assessment_id",
+    "federation_cell_activation_receipt": "receipt_id",
+    "federation_cell_suspension_receipt": "suspension_id",
+}
+
+
+KnownRecords = dict[str, dict[str, dict[str, Any]]]
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    """Load a JSON object."""
+    with path.open("r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: root value must be a JSON object")
+
+    return data
+
+
+def load_yaml(path: Path) -> dict[str, Any]:
+    """Load a YAML mapping."""
+    with path.open("r", encoding="utf-8") as file:
+        data = yaml.safe_load(file)
+
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: root value must be a YAML mapping")
+
+    return data
+
+
+def collect_yaml_files(directory: Path) -> list[Path]:
+    """Collect YAML files in stable order."""
+    files = list(directory.glob("*.yaml"))
+    files.extend(directory.glob("*.yml"))
+    return sorted(set(files))
+
+
+def format_error_path(parts: list[Any]) -> str:
+    """Convert a jsonschema path into readable dotted notation."""
+    if not parts:
+        return "<root>"
+
+    result = ""
+
+    for part in parts:
+        if isinstance(part, int):
+            result += f"[{part}]"
+        else:
+            if result:
+                result += "."
+            result += str(part)
+
+    return result
+
+
+def parse_datetime(value: Any) -> datetime | None:
+    """Parse ISO-8601 timestamps, including a trailing Z."""
+    if not isinstance(value, str):
+        return None
+
+    normalized = value
+
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+
+    try:
+        return datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+
+def duplicate_values(values: list[str]) -> list[str]:
+    """Return duplicated values in stable order."""
+    return sorted(
+        {
+            value
+            for value in values
+            if values.count(value) > 1
+        }
+    )
+
+
+def load_validators() -> dict[str, Draft202012Validator]:
+    """Load and compile every JSON Schema."""
+    validators: dict[str, Draft202012Validator] = {}
+
+    for record_type, schema_path in SCHEMA_PATHS.items():
+        schema = load_json(schema_path)
+        Draft202012Validator.check_schema(schema)
+        validators[record_type] = Draft202012Validator(
+            schema,
+            format_checker=FormatChecker(),
+        )
+
+    return validators
+
+
+def schema_errors(
+    document: dict[str, Any],
+    validators: dict[str, Draft202012Validator],
+) -> list[str]:
+    """Return JSON Schema errors for one document."""
+    record_type = document.get("record_type")
+
+    if not isinstance(record_type, str):
+        return ["record_type: missing or not a string"]
+
+    validator = validators.get(record_type)
+
+    if validator is None:
+        return [f"record_type: unsupported record type '{record_type}'"]
+
+    errors: list[str] = []
+
+    sorted_errors = sorted(
+        validator.iter_errors(document),
+        key=lambda error: list(error.absolute_path),
+    )
+
+    for error in sorted_errors:
+        path = format_error_path(list(error.absolute_path))
+        errors.append(f"{path}: {error.message}")
+
+    return errors
+
+
+def collect_known_records(
+    pass_files: list[Path],
+    validators: dict[str, Draft202012Validator],
+) -> KnownRecords:
+    """Collect schema-valid passing records by type and identifier."""
+    known: KnownRecords = {
+        record_type: {}
+        for record_type in ID_FIELDS
+    }
+
+    for path in pass_files:
+        try:
+            document = load_yaml(path)
+        except (OSError, ValueError, yaml.YAMLError):
+            continue
+
+        record_type = document.get("record_type")
+
+        if record_type not in ID_FIELDS:
+            continue
+
+        if schema_errors(document, validators):
+            continue
+
+        id_field = ID_FIELDS[record_type]
+        record_id = document.get(id_field)
+
+        if isinstance(record_id, str):
+            known[record_type][record_id] = document
+
+    return known
+
+
+def evidence_semantic_errors(
+    document: dict[str, Any],
+) -> list[str]:
+    """Validate Evidence identifier uniqueness."""
+    errors: list[str] = []
+    evidence = document.get("evidence", [])
+
+    if not isinstance(evidence, list):
+        return errors
+
+    evidence_ids: list[str] = []
+
+    for item in evidence:
+        if not isinstance(item, dict):
+            continue
+
+        evidence_id = item.get("evidence_id")
+
+        if isinstance(evidence_id, str):
+            evidence_ids.append(evidence_id)
+
+    for evidence_id in duplicate_values(evidence_ids):
+        errors.append(
+            f"evidence: duplicate evidence_id '{evidence_id}'"
+        )
+
+    return errors
+
+
+def external_reference_errors(
+    value: Any,
+    path: str,
+) -> list[str]:
+    """Require record_ref for externally resolved references."""
+    if not isinstance(value, dict):
+        return []
+
+    if (
+        value.get("resolution_status") == "externally_resolved"
+        and not value.get("record_ref")
+    ):
+        return [
+            f"{path}.record_ref: required when resolution_status "
+            "is 'externally_resolved'"
+        ]
+
+    return []
+
+
+def activation_request_semantic_errors(
+    document: dict[str, Any],
+) -> list[str]:
+    """Validate Cell Activation Request semantics."""
+    errors: list[str] = []
+
+    requested_capabilities = document.get("requested_capabilities", [])
+    capability_set = {
+        capability
+        for capability in requested_capabilities
+        if isinstance(capability, str)
+    } if isinstance(requested_capabilities, list) else set()
+
+    requested_roles = document.get("requested_roles", [])
+    role_ids: list[str] = []
+
+    if isinstance(requested_roles, list):
+        for index, role in enumerate(requested_roles):
+            if not isinstance(role, dict):
+                continue
+
+            role_id = role.get("role_id")
+
+            if isinstance(role_id, str):
+                role_ids.append(role_id)
+
+            required_capabilities = role.get(
+                "required_capabilities",
+                [],
+            )
+
+            if isinstance(required_capabilities, list):
+                for capability in required_capabilities:
+                    if (
+                        isinstance(capability, str)
+                        and capability not in capability_set
+                    ):
+                        errors.append(
+                            f"requested_roles[{index}]."
+                            "required_capabilities: capability "
+                            f"'{capability}' is not declared in "
+                            "requested_capabilities"
+                        )
+
+    for role_id in duplicate_values(role_ids):
+        errors.append(
+            f"requested_roles: duplicate role_id '{role_id}'"
+        )
+
+    activation_mode = document.get("activation_mode")
+    operation_context = document.get("operation_context")
+
+    if activation_mode == "temporary":
+        if not isinstance(operation_context, dict):
+            errors.append(
+                "operation_context: required for temporary activation"
+            )
+        elif not operation_context.get("requested_end_at"):
+            errors.append(
+                "operation_context.requested_end_at: required for "
+                "temporary activation"
+            )
+
+    if (
+        activation_mode == "emergency"
+        and not document.get("emergency_justification")
+    ):
+        errors.append(
+            "emergency_justification: required for emergency activation"
+        )
+
+    if isinstance(operation_context, dict):
+        start_at = parse_datetime(
+            operation_context.get("requested_start_at")
+        )
+        end_at = parse_datetime(
+            operation_context.get("requested_end_at")
+        )
+
+        if start_at is not None and end_at is not None:
+            if end_at < start_at:
+                errors.append(
+                    "operation_context.requested_end_at: must be equal "
+                    "to or later than requested_start_at"
+                )
+
+    request_status = document.get("request_status")
+
+    if (
+        request_status == "withdrawn"
+        and not document.get("status_reason")
+    ):
+        errors.append(
+            "status_reason: required when request_status is 'withdrawn'"
+        )
+
+    if (
+        request_status == "superseded"
+        and not document.get("superseded_by_ref")
+    ):
+        errors.append(
+            "superseded_by_ref: required when request_status is "
+            "'superseded'"
+        )
+
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
+def readiness_assessment_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Cell Readiness Assessment semantics."""
+    errors: list[str] = []
+
+    request_ref = document.get("request", {})
+    errors.extend(external_reference_errors(request_ref, "request"))
+
+    request_document: dict[str, Any] | None = None
+
+    if isinstance(request_ref, dict):
+        request_id = request_ref.get("request_id")
+
+        if (
+            request_ref.get("resolution_status") == "resolved"
+            and request_ref.get("source_cell_id")
+            == document.get("cell_id")
+        ):
+            request_document = known[
+                "federation_cell_activation_request"
+            ].get(request_id)
+
+            if request_document is None:
+                errors.append(
+                    "request.request_id: locally resolved Activation "
+                    f"Request '{request_id}' was not found"
+                )
+
+    if request_document is not None:
+        if request_document.get("cell_id") != document.get("cell_id"):
+            errors.append(
+                "cell_id: does not match the referenced Activation Request"
+            )
+
+        if (
+            request_document.get("federation_id")
+            != document.get("federation_id")
+        ):
+            errors.append(
+                "federation_id: does not match the referenced "
+                "Activation Request"
+            )
+
+        requested_at = parse_datetime(
+            request_document.get("requested_at")
+        )
+        assessed_at = parse_datetime(document.get("assessed_at"))
+
+        if (
+            requested_at is not None
+            and assessed_at is not None
+            and assessed_at < requested_at
+        ):
+            errors.append(
+                "assessed_at: must not be earlier than the request time"
+            )
+
+    assessed_at = parse_datetime(document.get("assessed_at"))
+    valid_until = parse_datetime(document.get("valid_until"))
+
+    if (
+        assessed_at is not None
+        and valid_until is not None
+        and valid_until < assessed_at
+    ):
+        errors.append(
+            "valid_until: must be equal to or later than assessed_at"
+        )
+
+    checks = document.get("checks", [])
+    check_ids: list[str] = []
+    required_statuses: list[str] = []
+    capability_checks: dict[str, list[str]] = {}
+
+    if isinstance(checks, list):
+        for index, check in enumerate(checks):
+            if not isinstance(check, dict):
+                continue
+
+            check_id = check.get("check_id")
+
+            if isinstance(check_id, str):
+                check_ids.append(check_id)
+
+            status = check.get("status")
+
+            if check.get("required") is True and isinstance(status, str):
+                required_statuses.append(status)
+
+            if check.get("category") == "requested_capability":
+                capability = check.get("capability")
+
+                if not isinstance(capability, str):
+                    errors.append(
+                        f"checks[{index}].capability: required for "
+                        "requested_capability checks"
+                    )
+                else:
+                    capability_checks.setdefault(capability, []).append(
+                        status if isinstance(status, str) else "unknown"
+                    )
+
+    for check_id in duplicate_values(check_ids):
+        errors.append(
+            f"checks: duplicate check_id '{check_id}'"
+        )
+
+    for capability, statuses in capability_checks.items():
+        if len(statuses) > 1:
+            errors.append(
+                "checks: duplicate requested_capability assessment for "
+                f"'{capability}'"
+            )
+
+    readiness_status = document.get("readiness_status")
+    blockers = document.get("blockers", [])
+    conditions = document.get("conditions", [])
+
+    if request_document is not None:
+        requested_capabilities = request_document.get(
+            "requested_capabilities",
+            [],
+        )
+
+        if isinstance(requested_capabilities, list):
+            for capability in requested_capabilities:
+                if not isinstance(capability, str):
+                    continue
+
+                statuses = capability_checks.get(capability)
+
+                if not statuses:
+                    errors.append(
+                        "checks: missing requested_capability check for "
+                        f"'{capability}'"
+                    )
+                    continue
+
+                status = statuses[0]
+
+                if readiness_status == "ready" and status != "pass":
+                    errors.append(
+                        "checks: readiness_status 'ready' requires "
+                        f"capability '{capability}' to pass"
+                    )
+
+                if (
+                    readiness_status == "ready_with_conditions"
+                    and status not in {"pass", "warn"}
+                ):
+                    errors.append(
+                        "checks: conditionally ready assessment requires "
+                        f"capability '{capability}' to pass or warn"
+                    )
+
+    if readiness_status == "ready":
+        invalid_required = [
+            status
+            for status in required_statuses
+            if status not in {"pass", "not_applicable"}
+        ]
+
+        if invalid_required:
+            errors.append(
+                "checks: readiness_status 'ready' cannot contain "
+                "required warn or fail checks"
+            )
+
+        if blockers:
+            errors.append(
+                "blockers: must be empty when readiness_status is 'ready'"
+            )
+
+        if conditions:
+            errors.append(
+                "conditions: must be empty when readiness_status is 'ready'"
+            )
+
+    if readiness_status == "ready_with_conditions":
+        if "fail" in required_statuses:
+            errors.append(
+                "checks: conditionally ready assessment cannot contain "
+                "a required failed check"
+            )
+
+        if "warn" not in required_statuses:
+            errors.append(
+                "checks: readiness_status 'ready_with_conditions' "
+                "requires at least one required warning"
+            )
+
+        if not conditions:
+            errors.append(
+                "conditions: required when readiness_status is "
+                "'ready_with_conditions'"
+            )
+
+    if readiness_status == "not_ready":
+        if "fail" not in required_statuses:
+            errors.append(
+                "checks: readiness_status 'not_ready' requires at least "
+                "one required failed check"
+            )
+
+        if not blockers:
+            errors.append(
+                "blockers: required when readiness_status is 'not_ready'"
+            )
+
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
+def activation_receipt_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Cell Activation Receipt semantics."""
+    errors: list[str] = []
+
+    request_ref = document.get("request", {})
+    assessment_ref = document.get("assessment", {})
+
+    errors.extend(external_reference_errors(request_ref, "request"))
+    errors.extend(external_reference_errors(assessment_ref, "assessment"))
+
+    request_document: dict[str, Any] | None = None
+    assessment_document: dict[str, Any] | None = None
+
+    if isinstance(request_ref, dict):
+        request_id = request_ref.get("request_id")
+
+        if (
+            request_ref.get("resolution_status") == "resolved"
+            and request_ref.get("source_cell_id")
+            == document.get("cell_id")
+        ):
+            request_document = known[
+                "federation_cell_activation_request"
+            ].get(request_id)
+
+            if request_document is None:
+                errors.append(
+                    "request.request_id: locally resolved Activation "
+                    f"Request '{request_id}' was not found"
+                )
+
+    if isinstance(assessment_ref, dict):
+        assessment_id = assessment_ref.get("assessment_id")
+
+        if (
+            assessment_ref.get("resolution_status") == "resolved"
+            and assessment_ref.get("source_cell_id")
+            == document.get("cell_id")
+        ):
+            assessment_document = known[
+                "federation_cell_readiness_assessment"
+            ].get(assessment_id)
+
+            if assessment_document is None:
+                errors.append(
+                    "assessment.assessment_id: locally resolved "
+                    f"Readiness Assessment '{assessment_id}' was not found"
+                )
+
+    for label, linked_document in [
+        ("Activation Request", request_document),
+        ("Readiness Assessment", assessment_document),
+    ]:
+        if linked_document is None:
+            continue
+
+        if linked_document.get("cell_id") != document.get("cell_id"):
+            errors.append(
+                f"cell_id: does not match the referenced {label}"
+            )
+
+        if (
+            linked_document.get("federation_id")
+            != document.get("federation_id")
+        ):
+            errors.append(
+                f"federation_id: does not match the referenced {label}"
+            )
+
+    if (
+        assessment_document is not None
+        and request_document is not None
+    ):
+        linked_assessment_request = assessment_document.get("request", {})
+
+        if isinstance(linked_assessment_request, dict):
+            if (
+                linked_assessment_request.get("request_id")
+                != request_document.get("request_id")
+            ):
+                errors.append(
+                    "assessment: does not assess the referenced "
+                    "Activation Request"
+                )
+
+    issued_at = parse_datetime(document.get("issued_at"))
+    decision = document.get("decision", {})
+
+    if isinstance(decision, dict):
+        decided_at = parse_datetime(decision.get("decided_at"))
+
+        if (
+            decided_at is not None
+            and issued_at is not None
+            and issued_at < decided_at
+        ):
+            errors.append(
+                "issued_at: must be equal to or later than "
+                "decision.decided_at"
+            )
+
+    if assessment_document is not None and issued_at is not None:
+        assessed_at = parse_datetime(
+            assessment_document.get("assessed_at")
+        )
+        valid_until = parse_datetime(
+            assessment_document.get("valid_until")
+        )
+
+        if assessed_at is not None and issued_at < assessed_at:
+            errors.append(
+                "issued_at: must not be earlier than assessed_at"
+            )
+
+        if valid_until is not None and issued_at > valid_until:
+            errors.append(
+                "assessment: readiness assessment expired before "
+                "the Activation Receipt was issued"
+            )
+
+    activation_window = document.get("activation_window")
+
+    if isinstance(activation_window, dict):
+        start_at = parse_datetime(activation_window.get("start_at"))
+        end_at = parse_datetime(activation_window.get("end_at"))
+
+        if start_at is not None and end_at is not None:
+            if end_at < start_at:
+                errors.append(
+                    "activation_window.end_at: must be equal to or later "
+                    "than start_at"
+                )
+
+    operational_roles = document.get("operational_roles", [])
+    granted_capabilities = document.get("granted_capabilities", [])
+
+    global_capabilities = {
+        capability
+        for capability in granted_capabilities
+        if isinstance(capability, str)
+    } if isinstance(granted_capabilities, list) else set()
+
+    assigned_role_ids: list[str] = []
+    assigned_role_types: dict[str, str] = {}
+
+    if isinstance(operational_roles, list):
+        for index, role in enumerate(operational_roles):
+            if not isinstance(role, dict):
+                continue
+
+            role_id = role.get("role_id")
+            role_type = role.get("role_type")
+
+            if isinstance(role_id, str):
+                assigned_role_ids.append(role_id)
+
+                if isinstance(role_type, str):
+                    assigned_role_types[role_id] = role_type
+
+            role_capabilities = role.get("granted_capabilities", [])
+
+            if isinstance(role_capabilities, list):
+                for capability in role_capabilities:
+                    if (
+                        isinstance(capability, str)
+                        and capability not in global_capabilities
+                    ):
+                        errors.append(
+                            f"operational_roles[{index}]."
+                            "granted_capabilities: capability "
+                            f"'{capability}' is not declared in "
+                            "granted_capabilities"
+                        )
+
+    for role_id in duplicate_values(assigned_role_ids):
+        errors.append(
+            f"operational_roles: duplicate role_id '{role_id}'"
+        )
+
+    outcome = document.get("activation_outcome")
+    conditions = document.get("conditions", [])
+
+    if outcome in {"activated", "activated_with_conditions"}:
+        if not operational_roles:
+            errors.append(
+                "operational_roles: required for an activated Cell"
+            )
+
+        if not granted_capabilities:
+            errors.append(
+                "granted_capabilities: required for an activated Cell"
+            )
+
+        if not isinstance(activation_window, dict):
+            errors.append(
+                "activation_window: required for an activated Cell"
+            )
+
+        if not isinstance(document.get("emergency_controls"), dict):
+            errors.append(
+                "emergency_controls: required for an activated Cell"
+            )
+
+        if request_document is not None:
+            request_status = request_document.get("request_status")
+
+            if request_status in {"withdrawn", "superseded"}:
+                errors.append(
+                    "request: withdrawn or superseded Activation Request "
+                    "cannot produce an activated outcome"
+                )
+
+            requested_roles = request_document.get(
+                "requested_roles",
+                [],
+            )
+
+            if isinstance(requested_roles, list):
+                for requested_role in requested_roles:
+                    if not isinstance(requested_role, dict):
+                        continue
+
+                    requested_role_id = requested_role.get("role_id")
+                    requested_role_type = requested_role.get("role_type")
+
+                    if requested_role_id not in assigned_role_types:
+                        errors.append(
+                            "operational_roles: requested role "
+                            f"'{requested_role_id}' was not assigned"
+                        )
+                    elif (
+                        assigned_role_types.get(requested_role_id)
+                        != requested_role_type
+                    ):
+                        errors.append(
+                            "operational_roles: assigned role type for "
+                            f"'{requested_role_id}' does not match the "
+                            "Activation Request"
+                        )
+
+            requested_capabilities = request_document.get(
+                "requested_capabilities",
+                [],
+            )
+
+            if isinstance(requested_capabilities, list):
+                for capability in requested_capabilities:
+                    if (
+                        isinstance(capability, str)
+                        and capability not in global_capabilities
+                    ):
+                        errors.append(
+                            "granted_capabilities: requested capability "
+                            f"'{capability}' was not granted"
+                        )
+
+    if outcome == "activated":
+        if (
+            assessment_document is not None
+            and assessment_document.get("readiness_status") != "ready"
+        ):
+            errors.append(
+                "activation_outcome: 'activated' requires a 'ready' "
+                "Readiness Assessment"
+            )
+
+        if conditions:
+            errors.append(
+                "conditions: must be empty when activation_outcome is "
+                "'activated'"
+            )
+
+    if outcome == "activated_with_conditions":
+        if (
+            assessment_document is not None
+            and assessment_document.get("readiness_status")
+            != "ready_with_conditions"
+        ):
+            errors.append(
+                "activation_outcome: 'activated_with_conditions' "
+                "requires a conditionally ready assessment"
+            )
+
+        if not conditions:
+            errors.append(
+                "conditions: required for activated_with_conditions"
+            )
+
+        if assessment_document is not None:
+            assessment_conditions = assessment_document.get(
+                "conditions",
+                [],
+            )
+
+            if isinstance(assessment_conditions, list):
+                missing_conditions = sorted(
+                    {
+                        condition
+                        for condition in assessment_conditions
+                        if isinstance(condition, str)
+                    }
+                    - {
+                        condition
+                        for condition in conditions
+                        if isinstance(condition, str)
+                    }
+                )
+
+                for condition in missing_conditions:
+                    errors.append(
+                        "conditions: assessment condition was not carried "
+                        f"into the Activation Receipt: '{condition}'"
+                    )
+
+    if outcome == "denied":
+        if operational_roles:
+            errors.append(
+                "operational_roles: must be empty for a denied activation"
+            )
+
+        if granted_capabilities:
+            errors.append(
+                "granted_capabilities: must be empty for a denied activation"
+            )
+
+        if activation_window is not None:
+            errors.append(
+                "activation_window: must be omitted for a denied activation"
+            )
+
+        if document.get("emergency_controls") is not None:
+            errors.append(
+                "emergency_controls: must be omitted for a denied activation"
+            )
+
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
+def suspension_receipt_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Cell Suspension Receipt semantics."""
+    errors: list[str] = []
+
+    activation_ref = document.get("activation_receipt", {})
+    errors.extend(
+        external_reference_errors(
+            activation_ref,
+            "activation_receipt",
+        )
+    )
+
+    activation_document: dict[str, Any] | None = None
+
+    if isinstance(activation_ref, dict):
+        receipt_id = activation_ref.get("receipt_id")
+
+        if (
+            activation_ref.get("resolution_status") == "resolved"
+            and activation_ref.get("source_cell_id")
+            == document.get("cell_id")
+        ):
+            activation_document = known[
+                "federation_cell_activation_receipt"
+            ].get(receipt_id)
+
+            if activation_document is None:
+                errors.append(
+                    "activation_receipt.receipt_id: locally resolved "
+                    f"Activation Receipt '{receipt_id}' was not found"
+                )
+
+    if activation_document is not None:
+        if activation_document.get("cell_id") != document.get("cell_id"):
+            errors.append(
+                "cell_id: does not match the Activation Receipt"
+            )
+
+        if (
+            activation_document.get("federation_id")
+            != document.get("federation_id")
+        ):
+            errors.append(
+                "federation_id: does not match the Activation Receipt"
+            )
+
+        if activation_document.get("activation_outcome") not in {
+            "activated",
+            "activated_with_conditions",
+        }:
+            errors.append(
+                "activation_receipt: only an activated Cell may be suspended"
+            )
+
+    scope = document.get("suspension_scope", {})
+
+    if isinstance(scope, dict):
+        role_ids = scope.get("role_ids", [])
+        capabilities = scope.get("capabilities", [])
+        route_refs = scope.get("route_refs", [])
+        mode = scope.get("mode")
+
+        has_target = any(
+            isinstance(value, list) and bool(value)
+            for value in [role_ids, capabilities, route_refs]
+        )
+
+        if mode == "partial" and not has_target:
+            errors.append(
+                "suspension_scope: partial suspension requires at least "
+                "one role, capability, or route target"
+            )
+
+        if mode == "full" and has_target:
+            errors.append(
+                "suspension_scope: full suspension must not enumerate "
+                "partial targets"
+            )
+
+        if activation_document is not None:
+            assigned_roles = activation_document.get(
+                "operational_roles",
+                [],
+            )
+            assigned_role_ids = {
+                role.get("role_id")
+                for role in assigned_roles
+                if isinstance(role, dict)
+                and isinstance(role.get("role_id"), str)
+            } if isinstance(assigned_roles, list) else set()
+
+            granted_capabilities = {
+                capability
+                for capability in activation_document.get(
+                    "granted_capabilities",
+                    [],
+                )
+                if isinstance(capability, str)
+            }
+
+            if isinstance(role_ids, list):
+                for role_id in role_ids:
+                    if (
+                        isinstance(role_id, str)
+                        and role_id not in assigned_role_ids
+                    ):
+                        errors.append(
+                            "suspension_scope.role_ids: role "
+                            f"'{role_id}' was not assigned by the "
+                            "Activation Receipt"
+                        )
+
+            if isinstance(capabilities, list):
+                for capability in capabilities:
+                    if (
+                        isinstance(capability, str)
+                        and capability not in granted_capabilities
+                    ):
+                        errors.append(
+                            "suspension_scope.capabilities: capability "
+                            f"'{capability}' was not granted by the "
+                            "Activation Receipt"
+                        )
+
+    if (
+        document.get("reason_code") == "dispute"
+        and not document.get("dispute_refs")
+    ):
+        errors.append(
+            "dispute_refs: required when reason_code is 'dispute'"
+        )
+
+    issued_at = parse_datetime(document.get("issued_at"))
+    decision = document.get("decision", {})
+
+    if isinstance(decision, dict):
+        decided_at = parse_datetime(decision.get("decided_at"))
+
+        if (
+            decided_at is not None
+            and issued_at is not None
+            and issued_at < decided_at
+        ):
+            errors.append(
+                "issued_at: must be equal to or later than "
+                "decision.decided_at"
+            )
+
+    effective_at = parse_datetime(document.get("effective_at"))
+    status = document.get("suspension_status")
+
+    if status == "active":
+        if effective_at is None:
+            errors.append(
+                "effective_at: required for an active suspension"
+            )
+
+        if document.get("lifted_at") is not None:
+            errors.append(
+                "lifted_at: must be omitted for an active suspension"
+            )
+
+        if document.get("lift_decision") is not None:
+            errors.append(
+                "lift_decision: must be omitted for an active suspension"
+            )
+
+        if document.get("cancelled_at") is not None:
+            errors.append(
+                "cancelled_at: must be omitted for an active suspension"
+            )
+
+    if status == "lifted":
+        lifted_at = parse_datetime(document.get("lifted_at"))
+        lift_decision = document.get("lift_decision")
+
+        if effective_at is None:
+            errors.append(
+                "effective_at: required for a lifted suspension"
+            )
+
+        if lifted_at is None:
+            errors.append(
+                "lifted_at: required when suspension_status is 'lifted'"
+            )
+
+        if not isinstance(lift_decision, dict):
+            errors.append(
+                "lift_decision: required when suspension_status is 'lifted'"
+            )
+
+        if (
+            effective_at is not None
+            and lifted_at is not None
+            and lifted_at < effective_at
+        ):
+            errors.append(
+                "lifted_at: must be equal to or later than effective_at"
+            )
+
+        if isinstance(lift_decision, dict) and lifted_at is not None:
+            lift_decided_at = parse_datetime(
+                lift_decision.get("decided_at")
+            )
+
+            if (
+                lift_decided_at is not None
+                and lift_decided_at > lifted_at
+            ):
+                errors.append(
+                    "lift_decision.decided_at: must not be later than "
+                    "lifted_at"
+                )
+
+    if status == "cancelled":
+        if not document.get("cancelled_at"):
+            errors.append(
+                "cancelled_at: required when suspension_status is "
+                "'cancelled'"
+            )
+
+        if not document.get("cancellation_reason"):
+            errors.append(
+                "cancellation_reason: required when suspension_status is "
+                "'cancelled'"
+            )
+
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
+def semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Dispatch semantic validation by record type."""
+    record_type = document.get("record_type")
+
+    if record_type == "federation_cell_activation_request":
+        return activation_request_semantic_errors(document)
+
+    if record_type == "federation_cell_readiness_assessment":
+        return readiness_assessment_semantic_errors(document, known)
+
+    if record_type == "federation_cell_activation_receipt":
+        return activation_receipt_semantic_errors(document, known)
+
+    if record_type == "federation_cell_suspension_receipt":
+        return suspension_receipt_semantic_errors(document, known)
+
+    return [
+        f"record_type: no semantic validator for '{record_type}'"
+    ]
+
+
+def validate_document(
+    path: Path,
+    validators: dict[str, Draft202012Validator],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate one YAML document."""
+    try:
+        document = load_yaml(path)
+    except (OSError, ValueError, yaml.YAMLError) as error:
+        return [f"[load] {error}"]
+
+    errors = schema_errors(document, validators)
+
+    if errors:
+        return [f"[schema] {error}" for error in errors]
+
+    return [
+        f"[semantic] {error}"
+        for error in semantic_errors(document, known)
+    ]
+
+
+def print_errors(errors: list[str]) -> None:
+    """Print formatted validation errors."""
+    for error in errors:
+        print(f"  - {error}")
+
+
+def main() -> int:
+    """Run repository validation."""
+    print(
+        "=== Royalty Cell Federation Operations Protocol Validation ==="
+    )
+    print()
+
+    try:
+        validators = load_validators()
+    except Exception as error:
+        print(f"[fatal] unable to load schemas: {error}")
+        return 1
+
+    for record_type, schema_path in SCHEMA_PATHS.items():
+        print(
+            f"schema [{record_type}]: "
+            f"{schema_path.relative_to(ROOT_DIR)}"
+        )
+
+    print()
+
+    pass_files = collect_yaml_files(PASS_DIR)
+    fail_files = collect_yaml_files(FAIL_DIR)
+
+    if not pass_files:
+        print("[fatal] no pass examples found")
+        return 1
+
+    if not fail_files:
+        print("[fatal] no fail examples found")
+        return 1
+
+    known = collect_known_records(pass_files, validators)
+    validation_failed = False
+
+    print("[validate-pass]")
+
+    for path in pass_files:
+        print(f"  {path.relative_to(ROOT_DIR)}")
+        errors = validate_document(path, validators, known)
+
+        if errors:
+            validation_failed = True
+            print("  [failed]")
+            print_errors(errors)
+        else:
+            print("  [schema-ok]")
+            print("  [semantic-ok]")
+
+        print()
+
+    print("[validate-expected-fail]")
+
+    for path in fail_files:
+        print(f"  {path.relative_to(ROOT_DIR)}")
+        errors = validate_document(path, validators, known)
+
+        if not errors:
+            validation_failed = True
+            print("  [unexpected-pass]")
+            print(
+                "  - invalid example passed all validation stages"
+            )
+        else:
+            print("  [expected-failure]")
+            print_errors(errors)
+
+        print()
+
+    if validation_failed:
+        print("Validation failed.")
+        return 1
+
+    print("Known local records:")
+
+    for record_type in sorted(known):
+        print(f"  [{record_type}]")
+
+        for record_id in sorted(known[record_type]):
+            print(f"    - {record_id}")
+
+    print()
+    print(
+        "All Royalty Cell Federation Operations Protocol examples "
+        "behaved as expected."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
