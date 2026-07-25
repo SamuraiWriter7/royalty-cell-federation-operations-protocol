@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://royalty-cell-federation-operations-protocol.example/schemas/cell-activation-receipt.schema.json",
+  "title": "Federation Cell Activation Receipt",
+  "description": "Records the federation decision to activate, conditionally activate, or deny activation of a Royalty Cell.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "receipt_id",
+    "request",
+    "assessment",
+    "federation_id",
+    "cell_id",
+    "activation_outcome",
+    "operational_roles",
+    "granted_capabilities",
+    "conditions",
+    "decision",
+    "receipt_effect",
+    "issued_at",
+    "evidence",
+    "visibility"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "record_type": {"const": "federation_cell_activation_receipt"},
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-activation-receipt:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "request": {"$ref": "#/$defs/requestRef"},
+    "assessment": {"$ref": "#/$defs/assessmentRef"},
+    "federation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-federation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "cell_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "activation_outcome": {
+      "type": "string",
+      "enum": ["activated", "activated_with_conditions", "denied"]
+    },
+    "operational_roles": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/operationalRole"}
+    },
+    "granted_capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/capability"}
+    },
+    "activation_window": {"$ref": "#/$defs/activationWindow"},
+    "conditions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 3000}
+    },
+    "fallback_cell_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+      }
+    },
+    "emergency_controls": {"$ref": "#/$defs/emergencyControls"},
+    "decision": {"$ref": "#/$defs/decision"},
+    "receipt_effect": {"const": "activation_record_only"},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/evidence"}
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "members", "restricted"]
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "record_origin",
+        "declare_usage",
+        "resolve_derivative",
+        "recognize_contribution",
+        "resolve_weights",
+        "approve_allocation",
+        "execute_settlement",
+        "audit_records",
+        "resolve_disputes",
+        "manage_holdbacks",
+        "manage_interoperability",
+        "coordinate_federation",
+        "emergency_suspend",
+        "other"
+      ]
+    },
+    "requestRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request_id", "source_cell_id", "resolution_status"],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-activation-request:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "source_cell_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": ["resolved", "externally_resolved", "unresolved"]
+        },
+        "record_ref": {"$ref": "#/$defs/reference"}
+      }
+    },
+    "assessmentRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assessment_id", "source_cell_id", "resolution_status"],
+      "properties": {
+        "assessment_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-readiness-assessment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "source_cell_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": ["resolved", "externally_resolved", "unresolved"]
+        },
+        "record_ref": {"$ref": "#/$defs/reference"}
+      }
+    },
+    "operationalRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role_id",
+        "role_type",
+        "granted_capabilities",
+        "authority_scope_ref"
+      ],
+      "properties": {
+        "role_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "role_type": {
+          "type": "string",
+          "enum": [
+            "origin_authority",
+            "usage_router",
+            "derivative_registry",
+            "contribution_reviewer",
+            "allocator",
+            "settlement_executor",
+            "auditor",
+            "dispute_handler",
+            "coordinator",
+            "reserve",
+            "fallback",
+            "other"
+          ]
+        },
+        "granted_capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/capability"}
+        },
+        "authority_scope_ref": {"$ref": "#/$defs/reference"},
+        "duty_window_ref": {"$ref": "#/$defs/reference"},
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      }
+    },
+    "activationWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_at"],
+      "properties": {
+        "start_at": {"type": "string", "format": "date-time"},
+        "end_at": {"type": "string", "format": "date-time"},
+        "renewal_policy_ref": {"$ref": "#/$defs/reference"}
+      }
+    },
+    "emergencyControls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suspension_authority_refs", "emergency_policy_ref"],
+      "properties": {
+        "suspension_authority_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/reference"}
+        },
+        "emergency_policy_ref": {"$ref": "#/$defs/reference"},
+        "maximum_isolation_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 525600
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decided_by_refs",
+        "decided_at",
+        "policy_ref",
+        "authorization_ref",
+        "rationale"
+      ],
+      "properties": {
+        "decided_by_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/reference"}
+        },
+        "decided_at": {"type": "string", "format": "date-time"},
+        "policy_ref": {"$ref": "#/$defs/reference"},
+        "authorization_ref": {"$ref": "#/$defs/reference"},
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "evidence_type", "evidence_ref", "recorded_at"],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-evidence:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "readiness_assessment",
+            "authorization_record",
+            "role_assignment",
+            "policy_record",
+            "signed_statement",
+            "external_reference",
+            "other"
+          ]
+        },
+        "evidence_ref": {"$ref": "#/$defs/reference"},
+        "recorded_at": {"type": "string", "format": "date-time"},
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      }
+    }
+  }
+}
