@@ -1,0 +1,345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://royalty-cell-federation-operations-protocol.example/schemas/duty-rotation-record.schema.json",
+  "title": "Federation Duty Rotation Record",
+  "description": "Defines and records an ordered duty rotation among compatible Operational Role Assignments.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "rotation_id",
+    "federation_id",
+    "operation_id",
+    "role_type",
+    "rotation_mode",
+    "participant_assignments",
+    "sequence",
+    "rotation_status",
+    "handoff_policy_ref",
+    "overlap_policy",
+    "decision",
+    "rotation_effect",
+    "issued_at",
+    "evidence",
+    "visibility"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.2.0"
+    },
+    "record_type": {
+      "const": "federation_duty_rotation_record"
+    },
+    "rotation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-duty-rotation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "federation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-federation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-operation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "role_type": {
+      "type": "string",
+      "enum": [
+        "origin_authority",
+        "usage_router",
+        "derivative_registry",
+        "contribution_reviewer",
+        "allocator",
+        "settlement_executor",
+        "auditor",
+        "dispute_handler",
+        "coordinator",
+        "reserve",
+        "fallback",
+        "other"
+      ]
+    },
+    "rotation_mode": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "load_based",
+        "incident_based",
+        "manual"
+      ]
+    },
+    "participant_assignments": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/assignmentRef"
+      }
+    },
+    "sequence": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/sequenceEntry"
+      }
+    },
+    "rotation_status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "active",
+        "suspended",
+        "completed",
+        "cancelled"
+      ]
+    },
+    "current_assignment_ref": {
+      "type": "string",
+      "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "next_assignment_ref": {
+      "type": "string",
+      "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "handoff_policy_ref": {
+      "$ref": "#/$defs/reference"
+    },
+    "overlap_policy": {
+      "$ref": "#/$defs/overlapPolicy"
+    },
+    "incident_ref": {
+      "$ref": "#/$defs/reference"
+    },
+    "capacity_policy_ref": {
+      "$ref": "#/$defs/reference"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "suspended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "cancelled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3000
+    },
+    "decision": {
+      "$ref": "#/$defs/decision"
+    },
+    "rotation_effect": {
+      "const": "duty_rotation_record_only"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "members",
+        "restricted"
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "assignmentRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignment_id",
+        "source_cell_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "assignment_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "source_cell_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "sequenceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence_no",
+        "assignment_id",
+        "start_at",
+        "end_at",
+        "duty_status"
+      ],
+      "properties": {
+        "sequence_no": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "assignment_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "start_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "duty_status": {
+          "type": "string",
+          "enum": [
+            "scheduled",
+            "current",
+            "completed",
+            "skipped"
+          ]
+        },
+        "handoff_ref": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "overlapPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "none",
+            "brief",
+            "explicit"
+          ]
+        },
+        "maximum_overlap_minutes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1440
+        },
+        "policy_ref": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decided_by_refs",
+        "decided_at",
+        "policy_ref",
+        "authorization_ref",
+        "rationale"
+      ],
+      "properties": {
+        "decided_by_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "policy_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "authorization_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "evidence_type",
+        "evidence_ref",
+        "recorded_at"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-evidence:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "schedule_record",
+            "handoff_record",
+            "capacity_report",
+            "incident_record",
+            "authorization_record",
+            "other"
+          ]
+        },
+        "evidence_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    }
+  }
+}
