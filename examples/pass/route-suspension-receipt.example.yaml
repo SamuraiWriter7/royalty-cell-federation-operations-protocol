@@ -1,0 +1,50 @@
+schema_version: 0.4.0
+record_type: federation_route_suspension_receipt
+route_suspension_id: urn:royalty-route-suspension:kazene:origin-routing:v0.4
+federation_id: urn:royalty-federation:kazene:royalty-network
+incident:
+  incident_id: urn:royalty-incident:kazene:primary-auditor:authority-drift:v0.4
+  resolution_status: resolved
+  record_ref: examples/pass/operational-incident-record.example.yaml
+formation:
+  formation_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  resolution_status: resolved
+  record_ref: examples/pass/federation-formation-record.example.yaml
+route:
+  route_id: urn:royalty-value-route:kazene:origin-routing:v0.3
+  resolution_status: resolved
+  record_ref: examples/pass/value-flow-route.example.yaml
+suspension_scope:
+  mode: stage
+  stage_ids:
+  - audit-trace
+reason_code: authority_violation
+suspension_status: lifted
+fallback_action:
+  action: activate_candidate
+  candidate_id: fallback-origin-audit
+  activation_ref: urn:royalty-fallback-activation:kazene:origin-routing:v0.4
+decision:
+  decided_by_refs:
+  - urn:royalty-federation-member:kazene:coordinator
+  decided_at: '2026-07-25T16:04:00+09:00'
+  policy_ref: urn:royalty-operations-policy:kazene:route-suspension:v1
+  authorization_ref: urn:authorization:kazene:route-reroute:v0.4
+  rationale: Suspend the affected audit stage and move the operation to the declared
+    fallback auditor.
+issued_at: '2026-07-25T16:05:00+09:00'
+effective_at: '2026-07-25T16:06:00+09:00'
+route_suspension_effect: route_suspension_only
+evidence:
+- evidence_id: urn:royalty-evidence:kazene:route-suspension:origin-routing:v0.4
+  evidence_type: route_state
+  evidence_ref: urn:royalty-route-state:kazene:origin-routing:fallback:v0.4
+  recorded_at: '2026-07-25T16:06:00+09:00'
+visibility: public
+lifted_at: '2026-07-25T17:01:00+09:00'
+lift_decision:
+  decided_by_refs:
+  - urn:royalty-federation-member:kazene:coordinator
+  decided_at: '2026-07-25T17:00:00+09:00'
+  policy_ref: urn:royalty-operations-policy:kazene:route-restoration:v1
+  rationale: Restore the primary route after recovery checks and isolation release.
