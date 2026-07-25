@@ -1,0 +1,394 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://royalty-cell-federation-operations-protocol.example/schemas/formation-change-record.schema.json",
+  "title": "Federation Formation Change Record",
+  "description": "Records bounded changes to a federation formation without silently mutating the original formation record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "change_id",
+    "formation",
+    "federation_id",
+    "trigger_type",
+    "change_status",
+    "operations",
+    "route_impacts",
+    "decision",
+    "change_effect",
+    "created_at",
+    "evidence",
+    "visibility"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.3.0"
+    },
+    "record_type": {
+      "const": "federation_formation_change_record"
+    },
+    "change_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-formation-change:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "formation": {
+      "$ref": "#/$defs/formationRef"
+    },
+    "federation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-federation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "trigger_type": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "load",
+        "incident",
+        "policy",
+        "manual"
+      ]
+    },
+    "incident_ref": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "change_status": {
+      "type": "string",
+      "enum": [
+        "proposed",
+        "approved",
+        "applied",
+        "rejected",
+        "rolled_back"
+      ]
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/changeOperation"
+      }
+    },
+    "route_impacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/routeImpact"
+      }
+    },
+    "decision": {
+      "$ref": "#/$defs/decision"
+    },
+    "applied_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rejected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rolled_back_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rollback_ref": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "status_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3000
+    },
+    "change_effect": {
+      "const": "formation_change_record_only"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "members",
+        "restricted"
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "formationRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "formation_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "formation_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-formation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        }
+      }
+    },
+    "changeOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "operation_type",
+        "target_type",
+        "target_id"
+      ],
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "operation_type": {
+          "type": "string",
+          "enum": [
+            "add_node",
+            "remove_node",
+            "replace_assignment",
+            "update_node_status",
+            "update_position",
+            "add_connection",
+            "remove_connection",
+            "update_connection_status"
+          ]
+        },
+        "target_type": {
+          "type": "string",
+          "enum": [
+            "node",
+            "connection"
+          ]
+        },
+        "target_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "new_assignment": {
+          "$ref": "#/$defs/assignmentRef"
+        },
+        "new_node_status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "standby",
+            "isolated"
+          ]
+        },
+        "new_position": {
+          "type": "string",
+          "enum": [
+            "core",
+            "perimeter",
+            "relay",
+            "gateway",
+            "reserve",
+            "observer"
+          ]
+        },
+        "new_connection_status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "standby",
+            "suspended"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    },
+    "assignmentRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignment_id",
+        "source_cell_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "assignment_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "source_cell_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        }
+      }
+    },
+    "routeImpact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route_id",
+        "impact_status",
+        "required_action"
+      ],
+      "properties": {
+        "route_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-value-route:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "impact_status": {
+          "type": "string",
+          "enum": [
+            "none",
+            "reroute_required",
+            "suspend_required",
+            "cancel_required"
+          ]
+        },
+        "required_action": {
+          "type": "string",
+          "enum": [
+            "none",
+            "activate_fallback_candidate",
+            "recalculate_route",
+            "suspend_route",
+            "cancel_route"
+          ]
+        },
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decided_by_refs",
+        "decided_at",
+        "policy_ref",
+        "authorization_ref",
+        "rationale"
+      ],
+      "properties": {
+        "decided_by_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "policy_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        },
+        "authorization_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "evidence_type",
+        "evidence_ref",
+        "recorded_at"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-evidence:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "formation_record",
+            "route_record",
+            "incident_record",
+            "capacity_report",
+            "authorization_record",
+            "other"
+          ]
+        },
+        "evidence_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    }
+  }
+}
