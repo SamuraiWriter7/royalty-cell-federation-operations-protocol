@@ -1,78 +1,55 @@
 schema_version: "0.2.0"
 record_type: federation_operational_role_assignment
+
 assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+
 activation_receipt:
   receipt_id: urn:royalty-activation-receipt:kazene:royalty-lab:origin-operation:v0.1
   source_cell_id: urn:royalty-cell:kazene:royalty-lab
   resolution_status: resolved
   record_ref: examples/pass/cell-activation-receipt.example.yaml
+
 federation_id: urn:royalty-federation:kazene:royalty-network
 cell_id: urn:royalty-cell:kazene:royalty-lab
+
 role_id: independent-auditor
 role_type: auditor
+
 assigned_capabilities:
   - audit_records
   - emergency_suspend
+
 authority_scope_ref: urn:royalty-authority-scope:kazene:audit:v1
+
 assignment_mode: primary
 assignment_status: active
+
 duty_window:
   start_at: "2026-07-25T15:00:00+09:00"
   end_at: "2026-07-26T04:00:00+09:00"
   timezone: Asia/Tokyo
+
 effective_at: "2026-07-25T15:00:00+09:00"
+
 decision:
   decided_by_refs:
     - urn:royalty-federation-member:kazene:coordinator
+
   decided_at: "2026-07-25T14:40:00+09:00"
+
   policy_ref: urn:royalty-operations-policy:kazene:role-assignment:v1
   authorization_ref: urn:authorization:kazene:auditor-assignment:v0.2
-  rationale: Assign the activated primary Cell to independent audit duty.
+
+  rationale: >-
+    Assign the activated primary Cell to independent audit duty.
+
 assignment_effect: operational_role_assignment_only
 issued_at: "2026-07-25T14:45:00+09:00"
+
 evidence:
   - evidence_id: urn:royalty-evidence:kazene:role-assignment:primary-auditor:v0.2
     evidence_type: activation_receipt
     evidence_ref: urn:royalty-activation-receipt:kazene:royalty-lab:origin-operation:v0.1
     recorded_at: "2026-07-25T14:45:00+09:00"
-visibility: public
 
-examples/pass/operational-role-assignment.reserve-auditor.example.yaml
-
-schema_version: "0.2.0"
-record_type: federation_operational_role_assignment
-assignment_id: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
-activation_receipt:
-  receipt_id: urn:royalty-activation-receipt:kazene:royalty-lab-reserve:audit-operation:v0.1
-  source_cell_id: urn:royalty-cell:kazene:royalty-lab-reserve
-  resolution_status: resolved
-  record_ref: examples/pass/cell-activation-receipt.reserve.example.yaml
-federation_id: urn:royalty-federation:kazene:royalty-network
-cell_id: urn:royalty-cell:kazene:royalty-lab-reserve
-role_id: reserve-auditor
-role_type: auditor
-assigned_capabilities:
-  - audit_records
-  - emergency_suspend
-authority_scope_ref: urn:royalty-authority-scope:kazene:reserve-audit:v1
-assignment_mode: fallback
-assignment_status: standby
-duty_window:
-  start_at: "2026-07-25T15:00:00+09:00"
-  end_at: "2026-07-26T04:00:00+09:00"
-  timezone: Asia/Tokyo
-decision:
-  decided_by_refs:
-    - urn:royalty-federation-member:kazene:coordinator
-  decided_at: "2026-07-25T14:40:00+09:00"
-  policy_ref: urn:royalty-operations-policy:kazene:role-assignment:v1
-  authorization_ref: urn:authorization:kazene:reserve-auditor-assignment:v0.2
-  rationale: Prepare the reserve Cell for fallback audit duty.
-assignment_effect: operational_role_assignment_only
-issued_at: "2026-07-25T14:45:00+09:00"
-evidence:
-  - evidence_id: urn:royalty-evidence:kazene:role-assignment:reserve-auditor:v0.2
-    evidence_type: activation_receipt
-    evidence_ref: urn:royalty-activation-receipt:kazene:royalty-lab-reserve:audit-operation:v0.1
-    recorded_at: "2026-07-25T14:45:00+09:00"
 visibility: public
