@@ -1,0 +1,254 @@
+=== Royalty Cell Federation Operations Protocol Validation ===
+
+schema [federation_cell_activation_request]: schemas/cell-activation-request.schema.json
+schema [federation_cell_readiness_assessment]: schemas/cell-readiness-assessment.schema.json
+schema [federation_cell_activation_receipt]: schemas/cell-activation-receipt.schema.json
+schema [federation_cell_suspension_receipt]: schemas/cell-suspension-receipt.schema.json
+schema [federation_operational_role_assignment]: schemas/operational-role-assignment.schema.json
+schema [federation_authority_scope_binding]: schemas/authority-scope-binding.schema.json
+schema [federation_cell_handoff_record]: schemas/cell-handoff-record.schema.json
+schema [federation_duty_rotation_record]: schemas/duty-rotation-record.schema.json
+schema [federation_formation_record]: schemas/federation-formation-record.schema.json
+schema [federation_cell_route_decision_receipt]: schemas/cell-route-decision-receipt.schema.json
+schema [federation_value_flow_route]: schemas/value-flow-route.schema.json
+schema [federation_formation_change_record]: schemas/formation-change-record.schema.json
+schema [federation_operational_incident_record]: schemas/operational-incident-record.schema.json
+schema [federation_cell_isolation_order]: schemas/cell-isolation-order.schema.json
+schema [federation_route_suspension_receipt]: schemas/route-suspension-receipt.schema.json
+schema [federation_cell_recovery_assessment]: schemas/cell-recovery-assessment.schema.json
+schema [federation_cell_reactivation_receipt]: schemas/cell-reactivation-receipt.schema.json
+
+[validate-pass]
+  examples/pass/authority-scope-binding.primary-auditor.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/authority-scope-binding.reserve-auditor.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-activation-receipt.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-activation-receipt.reserve.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-activation-request.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-activation-request.reserve.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-handoff-record.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-isolation-order.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-reactivation-receipt.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-readiness-assessment.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-readiness-assessment.reserve.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-recovery-assessment.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-route-decision-receipt.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/cell-suspension-receipt.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/duty-rotation-record.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/federation-formation-record.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/formation-change-record.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/operational-incident-record.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/operational-role-assignment.origin-authority.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/operational-role-assignment.primary-auditor.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/operational-role-assignment.reserve-auditor.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/operational-role-assignment.usage-router.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/route-suspension-receipt.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+  examples/pass/value-flow-route.example.yaml
+  [schema-ok]
+  [semantic-ok]
+
+[validate-expected-fail]
+  examples/fail/activated-receipt-missing-requested-role.example.yaml
+  [expected-failure]
+  - [semantic] operational_roles: requested role 'usage-router' was not assigned
+  - [semantic] operational_roles: requested role 'independent-auditor' was not assigned
+
+  examples/fail/activation-without-readiness.example.yaml
+  [expected-failure]
+  - [semantic] assessment.assessment_id: locally resolved Readiness Assessment 'urn:royalty-readiness-assessment:kazene:missing-assessment' was not found
+  - [semantic] operational_roles: requested role 'usage-router' was not assigned
+  - [semantic] operational_roles: requested role 'independent-auditor' was not assigned
+  - [semantic] granted_capabilities: requested capability 'declare_usage' was not granted
+  - [semantic] granted_capabilities: requested capability 'audit_records' was not granted
+  - [semantic] granted_capabilities: requested capability 'emergency_suspend' was not granted
+
+  examples/fail/active-formation-missing-required-role.example.yaml
+  [expected-failure]
+  - [semantic] required_role_types: active Formation does not cover role 'auditor'
+
+  examples/fail/active-rotation-with-two-current-assignments.example.yaml
+  [expected-failure]
+  - [semantic] sequence: active rotation requires exactly one current entry
+
+  examples/fail/applied-change-removes-audit-coverage.example.yaml
+  [expected-failure]
+  - [semantic] operations: applied Formation Change removes required role coverage for 'auditor'
+
+  examples/fail/approved-route-selects-rejected-candidate.example.yaml
+  [expected-failure]
+  - [semantic] selected_candidate_id: approved decision must select an eligible candidate
+
+  examples/fail/authority-binding-capability-expansion.example.yaml
+  [expected-failure]
+  - [semantic] permitted_capabilities: capability 'approve_allocation' was not assigned upstream
+
+  examples/fail/completed-handoff-without-target-acceptance.example.yaml
+  [expected-failure]
+  - [semantic] acknowledgements.target.status: must be accepted for completed handoff
+
+  examples/fail/emergency-request-without-justification.example.yaml
+  [expected-failure]
+  - [semantic] emergency_justification: required for emergency activation
+
+  examples/fail/formation-connection-unknown-node.example.yaml
+  [expected-failure]
+  - [semantic] connections[0].to_node_id: node 'unknown-node' was not found
+
+  examples/fail/handoff-self-transfer.example.yaml
+  [expected-failure]
+  - [semantic] target_assignment.assignment_id: must differ from source assignment
+
+  examples/fail/isolation-capability-expansion.example.yaml
+  [expected-failure]
+  - [semantic] isolation_scope.capabilities: capability 'execute_settlement' is not assigned to the target
+
+  examples/fail/partial-suspension-without-target.example.yaml
+  [expected-failure]
+  - [semantic] suspension_scope: partial suspension requires at least one role, capability, or route target
+
+  examples/fail/reactivation-capability-expansion.example.yaml
+  [expected-failure]
+  - [semantic] reactivated_capabilities: capability 'execute_settlement' is not assigned to the target
+  - [semantic] reactivated_capabilities: full reactivation must restore exactly the assigned capabilities
+
+  examples/fail/ready-assessment-with-failed-check.example.yaml
+  [expected-failure]
+  - [semantic] checks: readiness_status 'ready' requires capability 'record_origin' to pass
+  - [semantic] checks: missing requested_capability check for 'declare_usage'
+  - [semantic] checks: missing requested_capability check for 'audit_records'
+  - [semantic] checks: missing requested_capability check for 'emergency_suspend'
+  - [semantic] checks: readiness_status 'ready' cannot contain required warn or fail checks
+
+  examples/fail/ready-recovery-with-failed-check.example.yaml
+  [expected-failure]
+  - [semantic] checks: ready assessment requires every required check to pass
+
+  examples/fail/resolved-incident-without-resolution.example.yaml
+  [expected-failure]
+  - [semantic] resolution: required when incident_status is 'resolved'
+
+  examples/fail/role-assignment-capability-expansion.example.yaml
+  [expected-failure]
+  - [semantic] assigned_capabilities: capability 'execute_settlement' was not granted to the activated role
+  - [semantic] assigned_capabilities: capability 'execute_settlement' was not granted by the Activation Receipt
+
+  examples/fail/stage-suspension-without-stage.example.yaml
+  [expected-failure]
+  - [semantic] suspension_scope.stage_ids: required for stage suspension
+
+  examples/fail/value-route-path-mismatch.example.yaml
+  [expected-failure]
+  - [semantic] stages.node_id: stage path does not match the selected Route Decision candidate
+
+Known local records:
+  [federation_authority_scope_binding]
+    - urn:royalty-authority-binding:kazene:royalty-lab-reserve:auditor:v0.2
+    - urn:royalty-authority-binding:kazene:royalty-lab:auditor:v0.2
+  [federation_cell_activation_receipt]
+    - urn:royalty-activation-receipt:kazene:royalty-lab-reserve:audit-operation:v0.1
+    - urn:royalty-activation-receipt:kazene:royalty-lab:origin-operation:v0.1
+  [federation_cell_activation_request]
+    - urn:royalty-activation-request:kazene:royalty-lab-reserve:audit-operation:v0.1
+    - urn:royalty-activation-request:kazene:royalty-lab:origin-operation:v0.1
+  [federation_cell_handoff_record]
+    - urn:royalty-cell-handoff:kazene:auditor:primary-to-reserve:v0.2
+  [federation_cell_isolation_order]
+    - urn:royalty-isolation:kazene:primary-auditor:v0.4
+  [federation_cell_reactivation_receipt]
+    - urn:royalty-reactivation:kazene:primary-auditor:v0.4
+  [federation_cell_readiness_assessment]
+    - urn:royalty-readiness-assessment:kazene:royalty-lab-reserve:audit-operation:v0.1
+    - urn:royalty-readiness-assessment:kazene:royalty-lab:origin-operation:v0.1
+  [federation_cell_recovery_assessment]
+    - urn:royalty-recovery-assessment:kazene:primary-auditor:v0.4
+  [federation_cell_route_decision_receipt]
+    - urn:royalty-route-decision:kazene:origin-routing:v0.3
+  [federation_cell_suspension_receipt]
+    - urn:royalty-suspension-receipt:kazene:royalty-lab:usage-router:v0.1
+  [federation_duty_rotation_record]
+    - urn:royalty-duty-rotation:kazene:audit-shift:v0.2
+  [federation_formation_change_record]
+    - urn:royalty-formation-change:kazene:audit-fallback:v0.3
+  [federation_formation_record]
+    - urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  [federation_operational_incident_record]
+    - urn:royalty-incident:kazene:primary-auditor:authority-drift:v0.4
+  [federation_operational_role_assignment]
+    - urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+    - urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+    - urn:royalty-role-assignment:kazene:royalty-lab:origin-authority:v0.2
+    - urn:royalty-role-assignment:kazene:royalty-lab:usage-router:v0.2
+  [federation_route_suspension_receipt]
+    - urn:royalty-route-suspension:kazene:origin-routing:v0.4
+  [federation_value_flow_route]
+    - urn:royalty-value-route:kazene:origin-routing:v0.3
+
+All Royalty Cell Federation Operations Protocol examples behaved as expected.
