@@ -1,0 +1,65 @@
+schema_version: "0.2.0"
+record_type: federation_authority_scope_binding
+binding_id: urn:royalty-authority-binding:kazene:royalty-lab:auditor:v0.2
+assignment:
+  assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab
+  resolution_status: resolved
+  record_ref: examples/pass/operational-role-assignment.primary-auditor.example.yaml
+federation_id: urn:royalty-federation:kazene:royalty-network
+cell_id: urn:royalty-cell:kazene:royalty-lab
+role_id: independent-auditor
+binding_status: active
+permitted_capabilities:
+  - audit_records
+  - emergency_suspend
+prohibited_capabilities:
+  - execute_settlement
+resource_scope:
+  mode: listed_only
+  allowed_refs:
+    - urn:royalty-operation:kazene:origin-routing:v0.1
+    - urn:royalty-route:kazene:origin-audit:v1
+  denied_refs: []
+record_scope:
+  allowed_record_types:
+    - origin
+    - usage
+    - derivative
+    - contribution
+    - allocation_plan
+    - royalty_receipt
+  allowed_operations:
+    - read
+    - audit
+    - suspend
+route_scope:
+  allowed_route_refs:
+    - urn:royalty-route:kazene:origin-audit:v1
+  denied_route_refs: []
+time_window:
+  start_at: "2026-07-25T15:00:00+09:00"
+  end_at: "2026-07-26T04:00:00+09:00"
+delegation_policy:
+  mode: prohibited
+constraints:
+  - constraint_id: audit-before-settlement
+    constraint_type: audit_before_action
+    description: Settlement must not proceed before the audit result is recorded.
+    policy_ref: urn:royalty-operations-policy:kazene:audit-before-settlement:v1
+effective_at: "2026-07-25T15:00:00+09:00"
+decision:
+  decided_by_refs:
+    - urn:royalty-federation-member:kazene:coordinator
+  decided_at: "2026-07-25T14:50:00+09:00"
+  policy_ref: urn:royalty-operations-policy:kazene:authority-binding:v1
+  authorization_ref: urn:authorization:kazene:auditor-authority:v0.2
+  rationale: Bind audit duty to specified records, routes, and emergency controls.
+binding_effect: authority_scope_binding_only
+issued_at: "2026-07-25T14:55:00+09:00"
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:authority-binding:primary:v0.2
+    evidence_type: role_assignment
+    evidence_ref: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+    recorded_at: "2026-07-25T14:55:00+09:00"
+visibility: public
