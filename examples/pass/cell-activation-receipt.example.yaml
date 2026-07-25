@@ -1,0 +1,89 @@
+schema_version: "0.1.0"
+record_type: federation_cell_activation_receipt
+
+receipt_id: urn:royalty-activation-receipt:kazene:royalty-lab:origin-operation:v0.1
+
+request:
+  request_id: urn:royalty-activation-request:kazene:royalty-lab:origin-operation:v0.1
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab
+  resolution_status: resolved
+  record_ref: examples/pass/cell-activation-request.example.yaml
+
+assessment:
+  assessment_id: urn:royalty-readiness-assessment:kazene:royalty-lab:origin-operation:v0.1
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab
+  resolution_status: resolved
+  record_ref: examples/pass/cell-readiness-assessment.example.yaml
+
+federation_id: urn:royalty-federation:kazene:royalty-network
+cell_id: urn:royalty-cell:kazene:royalty-lab
+activation_outcome: activated
+
+operational_roles:
+  - role_id: origin-authority
+    role_type: origin_authority
+    granted_capabilities:
+      - record_origin
+    authority_scope_ref: urn:royalty-authority-scope:kazene:origin:v1
+
+  - role_id: usage-router
+    role_type: usage_router
+    granted_capabilities:
+      - declare_usage
+    authority_scope_ref: urn:royalty-authority-scope:kazene:usage:v1
+
+  - role_id: independent-auditor
+    role_type: auditor
+    granted_capabilities:
+      - audit_records
+      - emergency_suspend
+    authority_scope_ref: urn:royalty-authority-scope:kazene:audit:v1
+
+granted_capabilities:
+  - record_origin
+  - declare_usage
+  - audit_records
+  - emergency_suspend
+
+activation_window:
+  start_at: "2026-07-25T15:00:00+09:00"
+  renewal_policy_ref: urn:royalty-operations-policy:kazene:activation-renewal:v1
+
+conditions: []
+
+fallback_cell_refs:
+  - urn:royalty-cell:kazene:royalty-lab-reserve
+
+emergency_controls:
+  suspension_authority_refs:
+    - urn:royalty-cell-member:kazene:auditor
+    - urn:royalty-federation-member:kazene:coordinator
+  emergency_policy_ref: urn:royalty-operations-policy:kazene:emergency:v1
+  maximum_isolation_minutes: 120
+
+decision:
+  decided_by_refs:
+    - urn:royalty-federation-member:kazene:coordinator
+    - urn:royalty-cell-member:kazene:auditor
+  decided_at: "2026-07-25T14:30:00+09:00"
+  policy_ref: urn:royalty-operations-policy:kazene:activation:v1
+  authorization_ref: urn:authorization:kazene:royalty-lab-activation:v0.1
+  rationale: >-
+    The Cell passed all mandatory readiness checks and has explicit audit
+    and emergency-suspension coverage for the requested roles.
+
+receipt_effect: activation_record_only
+issued_at: "2026-07-25T14:35:00+09:00"
+
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:activation-receipt:readiness:v0.1
+    evidence_type: readiness_assessment
+    evidence_ref: urn:royalty-readiness-assessment:kazene:royalty-lab:origin-operation:v0.1
+    recorded_at: "2026-07-25T14:30:00+09:00"
+
+  - evidence_id: urn:royalty-evidence:kazene:activation-receipt:authorization:v0.1
+    evidence_type: authorization_record
+    evidence_ref: urn:authorization:kazene:royalty-lab-activation:v0.1
+    recorded_at: "2026-07-25T14:31:00+09:00"
+
+visibility: public
