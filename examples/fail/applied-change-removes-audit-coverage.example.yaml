@@ -1,0 +1,42 @@
+schema_version: "0.3.0"
+record_type: federation_formation_change_record
+change_id: urn:royalty-formation-change:kazene:remove-audit-coverage:v0.3
+formation:
+  formation_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  resolution_status: resolved
+federation_id: urn:royalty-federation:kazene:royalty-network
+trigger_type: manual
+change_status: applied
+operations:
+  - operation_id: isolate-primary-auditor
+    operation_type: update_node_status
+    target_type: node
+    target_id: audit-perimeter
+    new_node_status: isolated
+    reason: Intentionally isolate the primary auditor.
+  - operation_id: isolate-reserve-auditor
+    operation_type: update_node_status
+    target_type: node
+    target_id: reserve-audit
+    new_node_status: isolated
+    reason: Intentionally isolate the reserve auditor.
+route_impacts:
+  - route_id: urn:royalty-value-route:kazene:origin-routing:v0.3
+    impact_status: suspend_required
+    required_action: suspend_route
+decision:
+  decided_by_refs:
+    - urn:royalty-federation-member:kazene:coordinator
+  decided_at: "2026-07-25T16:20:00+09:00"
+  policy_ref: urn:royalty-operations-policy:kazene:formation-change:v1
+  authorization_ref: urn:authorization:kazene:invalid-audit-removal:v0.3
+  rationale: Intentionally invalid applied change that removes all audit coverage.
+applied_at: "2026-07-25T16:21:00+09:00"
+change_effect: formation_change_record_only
+created_at: "2026-07-25T16:20:00+09:00"
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:formation-change:remove-audit:v0.3
+    evidence_type: formation_record
+    evidence_ref: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+    recorded_at: "2026-07-25T16:20:00+09:00"
+visibility: restricted
