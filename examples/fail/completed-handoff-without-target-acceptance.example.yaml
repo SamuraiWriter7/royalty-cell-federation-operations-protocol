@@ -1,0 +1,60 @@
+schema_version: "0.2.0"
+record_type: federation_cell_handoff_record
+handoff_id: urn:royalty-cell-handoff:kazene:invalid:no-target-acceptance
+federation_id: urn:royalty-federation:kazene:royalty-network
+operation_id: urn:royalty-operation:kazene:origin-routing:v0.1
+handoff_mode: temporary_relief
+source_assignment:
+  assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab
+  resolution_status: resolved
+target_assignment:
+  assignment_id: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab-reserve
+  resolution_status: resolved
+source_authority_binding:
+  binding_id: urn:royalty-authority-binding:kazene:royalty-lab:auditor:v0.2
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab
+  resolution_status: resolved
+target_authority_binding:
+  binding_id: urn:royalty-authority-binding:kazene:royalty-lab-reserve:auditor:v0.2
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab-reserve
+  resolution_status: resolved
+handoff_scope:
+  capabilities: [audit_records]
+  route_refs: []
+  resource_refs: []
+state_transfer:
+  snapshot_ref: urn:royalty-state-snapshot:kazene:invalid-handoff
+  pending_items: []
+  unresolved_refs: []
+acknowledgements:
+  source:
+    actor_ref: urn:royalty-cell-member:kazene:auditor
+    status: accepted
+    recorded_at: "2026-07-25T19:55:00+09:00"
+  target:
+    actor_ref: urn:royalty-cell-member:kazene:reserve-auditor
+    status: pending
+    recorded_at: "2026-07-25T19:56:00+09:00"
+  coordinator:
+    actor_ref: urn:royalty-federation-member:kazene:coordinator
+    status: accepted
+    recorded_at: "2026-07-25T19:57:00+09:00"
+handoff_status: completed
+effective_at: "2026-07-25T20:00:00+09:00"
+completed_at: "2026-07-25T20:01:00+09:00"
+decision:
+  decided_by_refs: [urn:royalty-federation-member:kazene:coordinator]
+  decided_at: "2026-07-25T19:50:00+09:00"
+  policy_ref: urn:royalty-operations-policy:kazene:handoff:v1
+  authorization_ref: urn:authorization:kazene:invalid-handoff:v0.2
+  rationale: Intentionally incomplete acknowledgement.
+handoff_effect: handoff_record_only
+issued_at: "2026-07-25T20:02:00+09:00"
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:invalid-handoff-ack
+    evidence_type: state_snapshot
+    evidence_ref: urn:royalty-state-snapshot:kazene:invalid-handoff
+    recorded_at: "2026-07-25T19:54:00+09:00"
+visibility: restricted
