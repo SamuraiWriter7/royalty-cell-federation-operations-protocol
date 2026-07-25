@@ -1,0 +1,38 @@
+schema_version: "0.1.0"
+record_type: federation_cell_activation_request
+
+request_id: urn:royalty-activation-request:kazene:emergency-without-justification
+federation_id: urn:royalty-federation:kazene:royalty-network
+cell_id: urn:royalty-cell:kazene:royalty-lab
+requested_by_ref: urn:royalty-federation-member:kazene:coordinator
+requested_at: "2026-07-25T17:00:00+09:00"
+activation_mode: emergency
+
+requested_roles:
+  - role_id: emergency-auditor
+    role_type: auditor
+    required_capabilities:
+      - audit_records
+      - emergency_suspend
+    authority_scope_ref: urn:royalty-authority-scope:kazene:emergency-audit:v1
+
+requested_capabilities:
+  - audit_records
+  - emergency_suspend
+
+operation_context:
+  operation_id: urn:royalty-operation:kazene:emergency-audit:v0.1
+  objective: Emergency audit activation test.
+  priority: critical
+
+readiness_policy_ref: urn:royalty-operations-policy:kazene:cell-readiness:v1
+request_status: submitted
+request_effect: activation_request_only
+
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:emergency-request:test
+    evidence_type: signed_statement
+    evidence_ref: urn:statement:kazene:emergency-request-test
+    recorded_at: "2026-07-25T17:00:00+09:00"
+
+visibility: restricted
