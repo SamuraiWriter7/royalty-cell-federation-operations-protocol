@@ -1,0 +1,45 @@
+schema_version: "0.2.0"
+record_type: federation_authority_scope_binding
+binding_id: urn:royalty-authority-binding:kazene:invalid:capability-expansion
+assignment:
+  assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab
+  resolution_status: resolved
+federation_id: urn:royalty-federation:kazene:royalty-network
+cell_id: urn:royalty-cell:kazene:royalty-lab
+role_id: independent-auditor
+binding_status: active
+permitted_capabilities:
+  - audit_records
+  - approve_allocation
+prohibited_capabilities: []
+resource_scope:
+  mode: all_authorized
+  allowed_refs: []
+  denied_refs: []
+record_scope:
+  allowed_record_types: [allocation_plan]
+  allowed_operations: [approve]
+route_scope:
+  allowed_route_refs: []
+  denied_route_refs: []
+time_window:
+  start_at: "2026-07-25T15:00:00+09:00"
+delegation_policy:
+  mode: prohibited
+constraints: []
+effective_at: "2026-07-25T15:00:00+09:00"
+decision:
+  decided_by_refs: [urn:royalty-federation-member:kazene:coordinator]
+  decided_at: "2026-07-25T14:50:00+09:00"
+  policy_ref: urn:royalty-operations-policy:kazene:authority-binding:v1
+  authorization_ref: urn:authorization:kazene:invalid-binding:v0.2
+  rationale: Intentionally expands assigned capabilities.
+binding_effect: authority_scope_binding_only
+issued_at: "2026-07-25T14:55:00+09:00"
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:invalid-authority-binding
+    evidence_type: role_assignment
+    evidence_ref: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+    recorded_at: "2026-07-25T14:55:00+09:00"
+visibility: restricted
