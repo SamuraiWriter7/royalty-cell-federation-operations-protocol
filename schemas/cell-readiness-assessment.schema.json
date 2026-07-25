@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://royalty-cell-federation-operations-protocol.example/schemas/cell-readiness-assessment.schema.json",
+  "title": "Federation Cell Readiness Assessment",
+  "description": "Assesses whether a requested Royalty Cell is ready to receive operational authority inside a federation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "assessment_id",
+    "request",
+    "federation_id",
+    "cell_id",
+    "assessed_by_refs",
+    "assessed_at",
+    "readiness_status",
+    "checks",
+    "blockers",
+    "conditions",
+    "assessment_effect",
+    "evidence",
+    "visibility"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "record_type": {"const": "federation_cell_readiness_assessment"},
+    "assessment_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-readiness-assessment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "request": {"$ref": "#/$defs/requestRef"},
+    "federation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-federation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "cell_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "assessed_by_refs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/reference"}
+    },
+    "assessed_at": {"type": "string", "format": "date-time"},
+    "valid_until": {"type": "string", "format": "date-time"},
+    "readiness_status": {
+      "type": "string",
+      "enum": ["ready", "ready_with_conditions", "not_ready", "unknown"]
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/readinessCheck"}
+    },
+    "blockers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 3000}
+    },
+    "conditions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 3000}
+    },
+    "assessment_effect": {"const": "readiness_assessment_only"},
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/evidence"}
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "members", "restricted"]
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "record_origin",
+        "declare_usage",
+        "resolve_derivative",
+        "recognize_contribution",
+        "resolve_weights",
+        "approve_allocation",
+        "execute_settlement",
+        "audit_records",
+        "resolve_disputes",
+        "manage_holdbacks",
+        "manage_interoperability",
+        "coordinate_federation",
+        "emergency_suspend",
+        "other"
+      ]
+    },
+    "requestRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request_id", "source_cell_id", "resolution_status"],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-activation-request:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "source_cell_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": ["resolved", "externally_resolved", "unresolved"]
+        },
+        "record_ref": {"$ref": "#/$defs/reference"}
+      }
+    },
+    "readinessCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check_id", "category", "required", "status"],
+      "properties": {
+        "check_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "manifest_validity",
+            "governance_authority",
+            "role_coverage",
+            "requested_capability",
+            "allocation_policy",
+            "dispute_state",
+            "interoperability",
+            "audit_coverage",
+            "emergency_control",
+            "capacity",
+            "security",
+            "other"
+          ]
+        },
+        "required": {"type": "boolean"},
+        "status": {
+          "type": "string",
+          "enum": ["pass", "warn", "fail", "not_applicable"]
+        },
+        "capability": {"$ref": "#/$defs/capability"},
+        "subject_ref": {"$ref": "#/$defs/reference"},
+        "evidence_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/reference"}
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "evidence_type", "evidence_ref", "recorded_at"],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-evidence:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "manifest_validation",
+            "governance_validation",
+            "capability_test",
+            "policy_check",
+            "audit_report",
+            "security_assessment",
+            "capacity_report",
+            "external_reference",
+            "other"
+          ]
+        },
+        "evidence_ref": {"$ref": "#/$defs/reference"},
+        "recorded_at": {"type": "string", "format": "date-time"},
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      }
+    }
+  }
+}
