@@ -1,0 +1,106 @@
+schema_version: "0.1.0"
+record_type: federation_cell_readiness_assessment
+
+assessment_id: urn:royalty-readiness-assessment:kazene:royalty-lab:origin-operation:v0.1
+
+request:
+  request_id: urn:royalty-activation-request:kazene:royalty-lab:origin-operation:v0.1
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab
+  resolution_status: resolved
+  record_ref: examples/pass/cell-activation-request.example.yaml
+
+federation_id: urn:royalty-federation:kazene:royalty-network
+cell_id: urn:royalty-cell:kazene:royalty-lab
+
+assessed_by_refs:
+  - urn:royalty-cell-member:kazene:auditor
+  - urn:royalty-federation-member:kazene:coordinator
+
+assessed_at: "2026-07-25T14:20:00+09:00"
+valid_until: "2026-07-26T14:20:00+09:00"
+readiness_status: ready
+
+checks:
+  - check_id: manifest-validity
+    category: manifest_validity
+    required: true
+    status: pass
+    subject_ref: urn:royalty-cell-manifest:kazene:royalty-lab:v0.5
+    evidence_refs:
+      - urn:royalty-evidence:kazene:readiness:manifest:v0.1
+
+  - check_id: governance-authority
+    category: governance_authority
+    required: true
+    status: pass
+    subject_ref: urn:royalty-policy:kazene:governance:v1
+
+  - check_id: role-coverage
+    category: role_coverage
+    required: true
+    status: pass
+    subject_ref: urn:royalty-operation:kazene:origin-routing:v0.1
+
+  - check_id: capability-record-origin
+    category: requested_capability
+    required: true
+    status: pass
+    capability: record_origin
+
+  - check_id: capability-declare-usage
+    category: requested_capability
+    required: true
+    status: pass
+    capability: declare_usage
+
+  - check_id: capability-audit-records
+    category: requested_capability
+    required: true
+    status: pass
+    capability: audit_records
+
+  - check_id: capability-emergency-suspend
+    category: requested_capability
+    required: true
+    status: pass
+    capability: emergency_suspend
+
+  - check_id: audit-coverage
+    category: audit_coverage
+    required: true
+    status: pass
+    subject_ref: urn:royalty-authority-scope:kazene:audit:v1
+
+  - check_id: emergency-control
+    category: emergency_control
+    required: true
+    status: pass
+    subject_ref: urn:royalty-operations-policy:kazene:emergency:v1
+
+  - check_id: capacity
+    category: capacity
+    required: true
+    status: pass
+    subject_ref: urn:royalty-capacity-report:kazene:royalty-lab:v0.1
+
+blockers: []
+conditions: []
+assessment_effect: readiness_assessment_only
+
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:readiness:manifest:v0.1
+    evidence_type: manifest_validation
+    evidence_ref: urn:validation:kazene:royalty-lab-manifest:v0.1
+    recorded_at: "2026-07-25T14:10:00+09:00"
+
+  - evidence_id: urn:royalty-evidence:kazene:readiness:capabilities:v0.1
+    evidence_type: capability_test
+    evidence_ref: urn:test-report:kazene:royalty-lab-capabilities:v0.1
+    recorded_at: "2026-07-25T14:15:00+09:00"
+
+  - evidence_id: urn:royalty-evidence:kazene:readiness:security:v0.1
+    evidence_type: security_assessment
+    evidence_ref: urn:security-assessment:kazene:royalty-lab:v0.1
+    recorded_at: "2026-07-25T14:18:00+09:00"
+
+visibility: public
