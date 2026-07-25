@@ -1,0 +1,465 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://royalty-cell-federation-operations-protocol.example/schemas/cell-handoff-record.schema.json",
+  "title": "Federation Cell Handoff Record",
+  "description": "Transfers bounded operational responsibility, state, and pending work between two authorized Role Assignments.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "handoff_id",
+    "federation_id",
+    "operation_id",
+    "handoff_mode",
+    "source_assignment",
+    "target_assignment",
+    "source_authority_binding",
+    "target_authority_binding",
+    "handoff_scope",
+    "state_transfer",
+    "acknowledgements",
+    "handoff_status",
+    "decision",
+    "handoff_effect",
+    "issued_at",
+    "evidence",
+    "visibility"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.2.0"
+    },
+    "record_type": {
+      "const": "federation_cell_handoff_record"
+    },
+    "handoff_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-cell-handoff:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "federation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-federation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-operation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "handoff_mode": {
+      "type": "string",
+      "enum": [
+        "role_transfer",
+        "temporary_relief",
+        "emergency_takeover",
+        "recovery_return"
+      ]
+    },
+    "source_assignment": {
+      "$ref": "#/$defs/assignmentRef"
+    },
+    "target_assignment": {
+      "$ref": "#/$defs/assignmentRef"
+    },
+    "source_authority_binding": {
+      "$ref": "#/$defs/bindingRef"
+    },
+    "target_authority_binding": {
+      "$ref": "#/$defs/bindingRef"
+    },
+    "handoff_scope": {
+      "$ref": "#/$defs/handoffScope"
+    },
+    "state_transfer": {
+      "$ref": "#/$defs/stateTransfer"
+    },
+    "acknowledgements": {
+      "$ref": "#/$defs/acknowledgements"
+    },
+    "incident_ref": {
+      "$ref": "#/$defs/reference"
+    },
+    "emergency_authorization_ref": {
+      "$ref": "#/$defs/reference"
+    },
+    "handoff_status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "in_progress",
+        "completed",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "effective_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "failed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "cancelled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3000
+    },
+    "decision": {
+      "$ref": "#/$defs/decision"
+    },
+    "handoff_effect": {
+      "const": "handoff_record_only"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "members",
+        "restricted"
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "record_origin",
+        "declare_usage",
+        "resolve_derivative",
+        "recognize_contribution",
+        "resolve_weights",
+        "approve_allocation",
+        "execute_settlement",
+        "audit_records",
+        "resolve_disputes",
+        "manage_holdbacks",
+        "manage_interoperability",
+        "coordinate_federation",
+        "emergency_suspend",
+        "other"
+      ]
+    },
+    "assignmentRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignment_id",
+        "source_cell_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "assignment_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "source_cell_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "bindingRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding_id",
+        "source_cell_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "binding_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-authority-binding:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "source_cell_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-cell:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "handoffScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capabilities",
+        "route_refs",
+        "resource_refs"
+      ],
+      "properties": {
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/capability"
+          }
+        },
+        "route_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        },
+        "resource_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        }
+      }
+    },
+    "pendingItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_id",
+        "item_ref",
+        "item_type",
+        "mandatory",
+        "transfer_status"
+      ],
+      "properties": {
+        "item_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "item_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "item_type": {
+          "type": "string",
+          "enum": [
+            "record_review",
+            "route_state",
+            "pending_decision",
+            "settlement_hold",
+            "audit_task",
+            "dispute_task",
+            "other"
+          ]
+        },
+        "mandatory": {
+          "type": "boolean"
+        },
+        "transfer_status": {
+          "type": "string",
+          "enum": [
+            "accepted",
+            "deferred",
+            "rejected"
+          ]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    },
+    "stateTransfer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_ref",
+        "pending_items",
+        "unresolved_refs"
+      ],
+      "properties": {
+        "snapshot_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "pending_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pendingItem"
+          }
+        },
+        "unresolved_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        }
+      }
+    },
+    "ack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_ref",
+        "status",
+        "recorded_at"
+      ],
+      "properties": {
+        "actor_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "accepted",
+            "rejected"
+          ]
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    },
+    "acknowledgements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "target",
+        "coordinator"
+      ],
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/ack"
+        },
+        "target": {
+          "$ref": "#/$defs/ack"
+        },
+        "coordinator": {
+          "$ref": "#/$defs/ack"
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decided_by_refs",
+        "decided_at",
+        "policy_ref",
+        "authorization_ref",
+        "rationale"
+      ],
+      "properties": {
+        "decided_by_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "policy_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "authorization_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "evidence_type",
+        "evidence_ref",
+        "recorded_at"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-evidence:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "state_snapshot",
+            "handoff_checklist",
+            "acknowledgement_record",
+            "authorization_record",
+            "incident_record",
+            "other"
+          ]
+        },
+        "evidence_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    }
+  }
+}
