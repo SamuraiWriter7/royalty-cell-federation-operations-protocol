@@ -1,0 +1,45 @@
+schema_version: "0.3.0"
+record_type: federation_cell_route_decision_receipt
+route_decision_id: urn:royalty-route-decision:kazene:rejected-selection:v0.3
+formation:
+  formation_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  resolution_status: resolved
+federation_id: urn:royalty-federation:kazene:royalty-network
+operation_id: urn:royalty-operation:kazene:origin-routing:v0.1
+route_type: mixed
+route_requirements:
+  required_role_types:
+    - origin_authority
+    - auditor
+  required_capabilities:
+    - record_origin
+    - audit_records
+  max_hops: 3
+  audit_required: true
+  fallback_required: false
+candidate_routes:
+  - candidate_id: invalid-route
+    node_path:
+      - origin-core
+      - reserve-audit
+    candidate_status: rejected
+    score: 0.2
+    rationale: The reserve path is intentionally rejected in this example.
+    rejection_reason: Candidate is not approved for selection.
+selected_candidate_id: invalid-route
+decision_status: approved
+decision:
+  decided_by_refs:
+    - urn:royalty-federation-member:kazene:coordinator
+  decided_at: "2026-07-25T16:10:00+09:00"
+  policy_ref: urn:royalty-operations-policy:kazene:route-selection:v1
+  authorization_ref: urn:authorization:kazene:invalid-route-selection:v0.3
+  rationale: Intentionally invalid approved decision.
+decision_effect: route_decision_only
+issued_at: "2026-07-25T16:10:00+09:00"
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:route-decision:rejected:v0.3
+    evidence_type: candidate_evaluation
+    evidence_ref: urn:royalty-route-evaluation:kazene:rejected:v0.3
+    recorded_at: "2026-07-25T16:10:00+09:00"
+visibility: restricted
