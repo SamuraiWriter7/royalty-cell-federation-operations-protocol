@@ -1,0 +1,73 @@
+schema_version: "0.3.0"
+record_type: federation_value_flow_route
+route_id: urn:royalty-value-route:kazene:origin-routing:v0.3
+formation:
+  formation_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  resolution_status: resolved
+  record_ref: examples/pass/federation-formation-record.example.yaml
+route_decision:
+  route_decision_id: urn:royalty-route-decision:kazene:origin-routing:v0.3
+  resolution_status: resolved
+  record_ref: examples/pass/cell-route-decision-receipt.example.yaml
+federation_id: urn:royalty-federation:kazene:royalty-network
+operation_id: urn:royalty-operation:kazene:origin-routing:v0.1
+route_type: mixed
+route_status: active
+selected_candidate_id: primary-origin-audit
+fallback_candidate_id: fallback-origin-audit
+stages:
+  - stage_id: record-origin
+    sequence: 1
+    node_id: origin-core
+    assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:origin-authority:v0.2
+    role_type: origin_authority
+    required_capabilities:
+      - record_origin
+    stage_status: active
+    input_record_types:
+      - origin_submission
+    output_record_types:
+      - origin_record
+    handoff_required: true
+  - stage_id: declare-usage
+    sequence: 2
+    node_id: usage-relay
+    assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:usage-router:v0.2
+    role_type: usage_router
+    required_capabilities:
+      - declare_usage
+    stage_status: pending
+    input_record_types:
+      - origin_record
+    output_record_types:
+      - usage_record
+    handoff_required: true
+  - stage_id: audit-trace
+    sequence: 3
+    node_id: audit-perimeter
+    assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+    role_type: auditor
+    required_capabilities:
+      - audit_records
+    stage_status: pending
+    input_record_types:
+      - origin_record
+      - usage_record
+    output_record_types:
+      - audit_record
+    authority_binding_ref: urn:royalty-authority-binding:kazene:royalty-lab:auditor:v0.2
+    handoff_required: false
+route_constraints:
+  max_hops: 3
+  audit_required: true
+  unresolved_reference_policy: hold
+  failure_action: reroute
+route_effect: value_flow_route_only
+created_at: "2026-07-25T15:15:00+09:00"
+activated_at: "2026-07-25T15:16:00+09:00"
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:value-route:origin-routing:v0.3
+    evidence_type: route_activation
+    evidence_ref: urn:royalty-route-activation:kazene:origin-routing:v0.3
+    recorded_at: "2026-07-25T15:16:00+09:00"
+visibility: public
