@@ -1,0 +1,114 @@
+schema_version: "0.1.0"
+record_type: federation_cell_activation_request
+
+request_id: urn:royalty-activation-request:kazene:royalty-lab-reserve:audit-operation:v0.1
+federation_id: urn:royalty-federation:kazene:royalty-network
+cell_id: urn:royalty-cell:kazene:royalty-lab-reserve
+requested_by_ref: urn:royalty-federation-member:kazene:coordinator
+requested_at: "2026-07-25T14:00:00+09:00"
+activation_mode: fallback
+
+requested_roles:
+  - role_id: reserve-auditor
+    role_type: auditor
+    required_capabilities:
+      - audit_records
+      - emergency_suspend
+    authority_scope_ref: urn:royalty-authority-scope:kazene:reserve-audit:v1
+
+requested_capabilities:
+  - audit_records
+  - emergency_suspend
+
+operation_context:
+  operation_id: urn:royalty-operation:kazene:origin-routing:v0.1
+  objective: Provide fallback audit and emergency-suspension coverage.
+  priority: high
+  requested_start_at: "2026-07-25T15:00:00+09:00"
+
+readiness_policy_ref: urn:royalty-operations-policy:kazene:cell-readiness:v1
+request_status: submitted
+request_effect: activation_request_only
+
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:reserve-activation-request:manifest:v0.1
+    evidence_type: manifest_snapshot
+    evidence_ref: urn:royalty-cell-manifest:kazene:royalty-lab-reserve:v0.5
+    recorded_at: "2026-07-25T13:55:00+09:00"
+
+visibility: public
+
+examples/pass/cell-readiness-assessment.reserve.example.yaml
+
+schema_version: "0.1.0"
+record_type: federation_cell_readiness_assessment
+
+assessment_id: urn:royalty-readiness-assessment:kazene:royalty-lab-reserve:audit-operation:v0.1
+request:
+  request_id: urn:royalty-activation-request:kazene:royalty-lab-reserve:audit-operation:v0.1
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab-reserve
+  resolution_status: resolved
+  record_ref: examples/pass/cell-activation-request.reserve.example.yaml
+
+federation_id: urn:royalty-federation:kazene:royalty-network
+cell_id: urn:royalty-cell:kazene:royalty-lab-reserve
+assessed_by_refs:
+  - urn:royalty-cell-member:kazene:auditor
+  - urn:royalty-federation-member:kazene:coordinator
+assessed_at: "2026-07-25T14:20:00+09:00"
+valid_until: "2026-07-26T14:20:00+09:00"
+readiness_status: ready
+
+checks:
+  - check_id: manifest-validity
+    category: manifest_validity
+    required: true
+    status: pass
+    subject_ref: urn:royalty-cell-manifest:kazene:royalty-lab-reserve:v0.5
+  - check_id: governance-authority
+    category: governance_authority
+    required: true
+    status: pass
+    subject_ref: urn:royalty-policy:kazene:governance:v1
+  - check_id: role-coverage
+    category: role_coverage
+    required: true
+    status: pass
+    subject_ref: urn:royalty-operation:kazene:origin-routing:v0.1
+  - check_id: capability-audit-records
+    category: requested_capability
+    required: true
+    status: pass
+    capability: audit_records
+  - check_id: capability-emergency-suspend
+    category: requested_capability
+    required: true
+    status: pass
+    capability: emergency_suspend
+  - check_id: audit-coverage
+    category: audit_coverage
+    required: true
+    status: pass
+    subject_ref: urn:royalty-authority-scope:kazene:reserve-audit:v1
+  - check_id: emergency-control
+    category: emergency_control
+    required: true
+    status: pass
+    subject_ref: urn:royalty-operations-policy:kazene:emergency:v1
+  - check_id: capacity
+    category: capacity
+    required: true
+    status: pass
+    subject_ref: urn:royalty-capacity-report:kazene:royalty-lab-reserve:v0.1
+
+blockers: []
+conditions: []
+assessment_effect: readiness_assessment_only
+
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:reserve-readiness:capabilities:v0.1
+    evidence_type: capability_test
+    evidence_ref: urn:test-report:kazene:royalty-lab-reserve:v0.1
+    recorded_at: "2026-07-25T14:15:00+09:00"
+
+visibility: public
