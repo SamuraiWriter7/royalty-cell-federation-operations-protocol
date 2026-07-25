@@ -1,0 +1,40 @@
+schema_version: "0.1.0"
+record_type: federation_cell_readiness_assessment
+
+assessment_id: urn:royalty-readiness-assessment:kazene:invalid-ready-state
+
+request:
+  request_id: urn:royalty-activation-request:kazene:royalty-lab:origin-operation:v0.1
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab
+  resolution_status: resolved
+
+federation_id: urn:royalty-federation:kazene:royalty-network
+cell_id: urn:royalty-cell:kazene:royalty-lab
+assessed_by_refs:
+  - urn:royalty-cell-member:kazene:auditor
+assessed_at: "2026-07-25T17:10:00+09:00"
+readiness_status: ready
+
+checks:
+  - check_id: manifest-validity
+    category: manifest_validity
+    required: true
+    status: pass
+
+  - check_id: capability-record-origin
+    category: requested_capability
+    required: true
+    status: fail
+    capability: record_origin
+
+blockers: []
+conditions: []
+assessment_effect: readiness_assessment_only
+
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:invalid-ready-state
+    evidence_type: capability_test
+    evidence_ref: urn:test-report:kazene:invalid-ready-state
+    recorded_at: "2026-07-25T17:10:00+09:00"
+
+visibility: members
