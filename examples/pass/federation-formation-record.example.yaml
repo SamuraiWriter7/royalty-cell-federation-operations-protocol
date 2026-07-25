@@ -1,0 +1,101 @@
+schema_version: "0.3.0"
+record_type: federation_formation_record
+formation_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+federation_id: urn:royalty-federation:kazene:royalty-network
+formation_name: Origin Usage Audit Wagon Formation
+formation_type: wagon_fort
+formation_status: active
+objective: Route Origin and Usage records through an independent audit perimeter with a reserve auditor available.
+participating_nodes:
+  - node_id: origin-core
+    assignment:
+      assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:origin-authority:v0.2
+      source_cell_id: urn:royalty-cell:kazene:royalty-lab
+      resolution_status: resolved
+      record_ref: examples/pass/operational-role-assignment.origin-authority.example.yaml
+    operational_position: core
+    node_status: active
+    sequence_order: 1
+  - node_id: usage-relay
+    assignment:
+      assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:usage-router:v0.2
+      source_cell_id: urn:royalty-cell:kazene:royalty-lab
+      resolution_status: resolved
+      record_ref: examples/pass/operational-role-assignment.usage-router.example.yaml
+    operational_position: relay
+    node_status: active
+    sequence_order: 2
+  - node_id: audit-perimeter
+    assignment:
+      assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+      source_cell_id: urn:royalty-cell:kazene:royalty-lab
+      resolution_status: resolved
+      record_ref: examples/pass/operational-role-assignment.primary-auditor.example.yaml
+    operational_position: perimeter
+    node_status: active
+    sequence_order: 3
+    authority_binding_refs:
+      - urn:royalty-authority-binding:kazene:royalty-lab:auditor:v0.2
+  - node_id: reserve-audit
+    assignment:
+      assignment_id: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+      source_cell_id: urn:royalty-cell:kazene:royalty-lab-reserve
+      resolution_status: resolved
+      record_ref: examples/pass/operational-role-assignment.reserve-auditor.example.yaml
+    operational_position: reserve
+    node_status: standby
+    sequence_order: 4
+    authority_binding_refs:
+      - urn:royalty-authority-binding:kazene:royalty-lab-reserve:auditor:v0.2
+connections:
+  - connection_id: origin-to-usage
+    from_node_id: origin-core
+    to_node_id: usage-relay
+    connection_type: value_flow
+    direction: forward
+    required: true
+    connection_status: active
+    policy_ref: urn:royalty-operations-policy:kazene:origin-to-usage:v1
+  - connection_id: usage-to-audit
+    from_node_id: usage-relay
+    to_node_id: audit-perimeter
+    connection_type: audit
+    direction: forward
+    required: true
+    connection_status: active
+    policy_ref: urn:royalty-operations-policy:kazene:usage-to-audit:v1
+  - connection_id: audit-fallback
+    from_node_id: audit-perimeter
+    to_node_id: reserve-audit
+    connection_type: fallback
+    direction: forward
+    required: false
+    connection_status: standby
+    policy_ref: urn:royalty-operations-policy:kazene:audit-fallback:v1
+required_role_types:
+  - origin_authority
+  - usage_router
+  - auditor
+coordination_policy:
+  coordinator_refs:
+    - urn:royalty-federation-member:kazene:coordinator
+  decision_policy_ref: urn:royalty-operations-policy:kazene:formation-governance:v1
+  quorum: 1
+  conflict_policy_ref: urn:royalty-operations-policy:kazene:formation-conflict:v1
+fallback_policy:
+  enabled: true
+  trigger_types:
+    - node_failure
+    - audit_unavailable
+  fallback_node_ids:
+    - reserve-audit
+  policy_ref: urn:royalty-operations-policy:kazene:formation-fallback:v1
+formation_effect: formation_record_only
+created_at: "2026-07-25T15:00:00+09:00"
+activated_at: "2026-07-25T15:05:00+09:00"
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:formation:origin-usage-audit:v0.3
+    evidence_type: formation_plan
+    evidence_ref: urn:royalty-formation-plan:kazene:origin-usage-audit:v0.3
+    recorded_at: "2026-07-25T15:00:00+09:00"
+visibility: public
