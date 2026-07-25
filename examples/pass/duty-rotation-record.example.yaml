@@ -1,0 +1,50 @@
+schema_version: "0.2.0"
+record_type: federation_duty_rotation_record
+rotation_id: urn:royalty-duty-rotation:kazene:audit-shift:v0.2
+federation_id: urn:royalty-federation:kazene:royalty-network
+operation_id: urn:royalty-operation:kazene:origin-routing:v0.1
+role_type: auditor
+rotation_mode: scheduled
+participant_assignments:
+  - assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+    source_cell_id: urn:royalty-cell:kazene:royalty-lab
+    resolution_status: resolved
+    record_ref: examples/pass/operational-role-assignment.primary-auditor.example.yaml
+  - assignment_id: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+    source_cell_id: urn:royalty-cell:kazene:royalty-lab-reserve
+    resolution_status: resolved
+    record_ref: examples/pass/operational-role-assignment.reserve-auditor.example.yaml
+sequence:
+  - sequence_no: 1
+    assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+    start_at: "2026-07-25T15:00:00+09:00"
+    end_at: "2026-07-25T20:00:00+09:00"
+    duty_status: completed
+    handoff_ref: urn:royalty-cell-handoff:kazene:auditor:primary-to-reserve:v0.2
+  - sequence_no: 2
+    assignment_id: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+    start_at: "2026-07-25T20:00:00+09:00"
+    end_at: "2026-07-26T04:00:00+09:00"
+    duty_status: current
+    handoff_ref: urn:royalty-cell-handoff:kazene:auditor:primary-to-reserve:v0.2
+rotation_status: active
+current_assignment_ref: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+handoff_policy_ref: urn:royalty-operations-policy:kazene:handoff:v1
+overlap_policy:
+  mode: none
+started_at: "2026-07-25T15:00:00+09:00"
+decision:
+  decided_by_refs:
+    - urn:royalty-federation-member:kazene:coordinator
+  decided_at: "2026-07-25T14:58:00+09:00"
+  policy_ref: urn:royalty-operations-policy:kazene:duty-rotation:v1
+  authorization_ref: urn:authorization:kazene:audit-rotation:v0.2
+  rationale: Rotate audit duty between primary and reserve Cells on a fixed schedule.
+rotation_effect: duty_rotation_record_only
+issued_at: "2026-07-25T14:59:00+09:00"
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:duty-rotation:schedule:v0.2
+    evidence_type: schedule_record
+    evidence_ref: urn:royalty-schedule:kazene:audit-shift:v0.2
+    recorded_at: "2026-07-25T14:58:00+09:00"
+visibility: public
