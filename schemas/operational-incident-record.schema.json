@@ -1,0 +1,361 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://royalty-cell-federation-operations-protocol.example/schemas/operational-incident-record.schema.json",
+  "title": "Federation Operational Incident Record",
+  "description": "Records an observed federation incident without by itself imposing isolation, route suspension, or recovery decisions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "incident_id",
+    "federation_id",
+    "formation",
+    "incident_type",
+    "severity",
+    "incident_status",
+    "detected_by_refs",
+    "detected_at",
+    "summary",
+    "affected_nodes",
+    "affected_route_ids",
+    "containment_required",
+    "recommended_actions",
+    "incident_effect",
+    "evidence",
+    "visibility"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.4.0"
+    },
+    "record_type": {
+      "const": "federation_operational_incident_record"
+    },
+    "incident_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-incident:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "federation_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-federation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "formation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "formation_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "formation_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-formation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        }
+      }
+    },
+    "incident_type": {
+      "type": "string",
+      "enum": [
+        "node_failure",
+        "capability_failure",
+        "authority_violation",
+        "route_failure",
+        "reference_failure",
+        "audit_failure",
+        "settlement_risk",
+        "policy_conflict",
+        "overload",
+        "security_event",
+        "data_integrity",
+        "other"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "major",
+        "critical"
+      ]
+    },
+    "incident_status": {
+      "type": "string",
+      "enum": [
+        "detected",
+        "contained",
+        "under_investigation",
+        "resolved",
+        "closed"
+      ]
+    },
+    "detected_by_refs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 1000
+      }
+    },
+    "detected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8000
+    },
+    "affected_nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/affectedNode"
+      }
+    },
+    "affected_route_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^urn:royalty-value-route:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+      }
+    },
+    "containment_required": {
+      "type": "boolean"
+    },
+    "recommended_actions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "isolate_node",
+          "suspend_route",
+          "activate_fallback",
+          "hold_value",
+          "request_audit",
+          "revoke_authority",
+          "recover_cell",
+          "replace_cell",
+          "other"
+        ]
+      }
+    },
+    "containment_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 1000
+      }
+    },
+    "resolution": {
+      "$ref": "#/$defs/resolution"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "closed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3000
+    },
+    "incident_effect": {
+      "const": "incident_record_only"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "members",
+        "restricted"
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "affectedNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "assignment_id",
+        "impact_type",
+        "impact_status"
+      ],
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "assignment_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "impact_type": {
+          "type": "string",
+          "enum": [
+            "unavailable",
+            "degraded",
+            "suspected",
+            "compromised",
+            "overloaded"
+          ]
+        },
+        "impact_status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "cleared"
+          ]
+        },
+        "observed_capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "resolved_by_refs",
+        "resolved_at",
+        "rationale",
+        "remedy_refs"
+      ],
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "recovered",
+            "rerouted",
+            "replaced",
+            "false_positive",
+            "accepted_risk",
+            "retired"
+          ]
+        },
+        "resolved_by_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "resolved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8000
+        },
+        "remedy_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "evidence_type",
+        "evidence_ref",
+        "recorded_at"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-evidence:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "incident_observation",
+            "monitoring_record",
+            "audit_record",
+            "isolation_order",
+            "route_state",
+            "recovery_test",
+            "security_assessment",
+            "capacity_report",
+            "decision_record",
+            "external_reference",
+            "other"
+          ]
+        },
+        "evidence_ref": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    }
+  }
+}
