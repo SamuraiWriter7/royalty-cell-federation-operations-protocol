@@ -1,0 +1,56 @@
+schema_version: "0.1.0"
+record_type: federation_cell_suspension_receipt
+
+suspension_id: urn:royalty-suspension-receipt:kazene:royalty-lab:usage-router:v0.1
+
+activation_receipt:
+  receipt_id: urn:royalty-activation-receipt:kazene:royalty-lab:origin-operation:v0.1
+  source_cell_id: urn:royalty-cell:kazene:royalty-lab
+  resolution_status: resolved
+  record_ref: examples/pass/cell-activation-receipt.example.yaml
+
+federation_id: urn:royalty-federation:kazene:royalty-network
+cell_id: urn:royalty-cell:kazene:royalty-lab
+
+suspension_scope:
+  mode: partial
+  role_ids:
+    - usage-router
+  capabilities:
+    - declare_usage
+  route_refs: []
+
+suspension_status: active
+reason_code: security_risk
+
+hold_policy:
+  settlement_action: hold_pending
+  new_operations: restricted
+  policy_ref: urn:royalty-operations-policy:kazene:suspension:v1
+
+decision:
+  imposed_by_refs:
+    - urn:royalty-cell-member:kazene:auditor
+  decided_at: "2026-07-25T16:00:00+09:00"
+  authorization_ref: urn:authorization:kazene:partial-suspension:v0.1
+  policy_ref: urn:royalty-operations-policy:kazene:emergency:v1
+  rationale: >-
+    Usage routing is temporarily suspended while an anomalous authorization
+    reference is reviewed. Origin recording and independent audit remain active.
+
+effective_at: "2026-07-25T16:05:00+09:00"
+suspension_effect: operational_suspension_only
+issued_at: "2026-07-25T16:02:00+09:00"
+
+evidence:
+  - evidence_id: urn:royalty-evidence:kazene:suspension:security:v0.1
+    evidence_type: security_assessment
+    evidence_ref: urn:security-assessment:kazene:usage-routing-anomaly:v0.1
+    recorded_at: "2026-07-25T15:58:00+09:00"
+
+  - evidence_id: urn:royalty-evidence:kazene:suspension:authorization:v0.1
+    evidence_type: authorization_record
+    evidence_ref: urn:authorization:kazene:partial-suspension:v0.1
+    recorded_at: "2026-07-25T16:00:00+09:00"
+
+visibility: public
