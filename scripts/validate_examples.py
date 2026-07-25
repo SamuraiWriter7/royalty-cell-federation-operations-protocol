@@ -2,7 +2,7 @@
 """
 Validate Royalty Cell Federation Operations Protocol examples.
 
-Supported v0.1-v0.2 records:
+Supported v0.1-v0.3 records:
 
 - Federation Cell Activation Request
 - Federation Cell Readiness Assessment
@@ -12,6 +12,10 @@ Supported v0.1-v0.2 records:
 - Federation Authority Scope Binding
 - Federation Cell Handoff Record
 - Federation Duty Rotation Record
+- Federation Formation Record
+- Federation Cell Route Decision Receipt
+- Federation Value Flow Route
+- Federation Formation Change Record
 
 Validation stages:
 
@@ -19,7 +23,7 @@ Validation stages:
 2. Record-type-specific JSON Schema validation
 3. Record-type-specific semantic validation
 4. Local cross-record reference validation
-5. Lifecycle, role, capability, and time-order validation
+5. Lifecycle, role, capability, formation, routing, and time-order validation
 
 Files under examples/pass must pass every validation stage.
 Files under examples/fail must fail at least one validation stage.
@@ -66,6 +70,18 @@ SCHEMA_PATHS = {
     "federation_duty_rotation_record": (
         ROOT_DIR / "schemas" / "duty-rotation-record.schema.json"
     ),
+    "federation_formation_record": (
+        ROOT_DIR / "schemas" / "federation-formation-record.schema.json"
+    ),
+    "federation_cell_route_decision_receipt": (
+        ROOT_DIR / "schemas" / "cell-route-decision-receipt.schema.json"
+    ),
+    "federation_value_flow_route": (
+        ROOT_DIR / "schemas" / "value-flow-route.schema.json"
+    ),
+    "federation_formation_change_record": (
+        ROOT_DIR / "schemas" / "formation-change-record.schema.json"
+    ),
 }
 
 ID_FIELDS = {
@@ -77,6 +93,10 @@ ID_FIELDS = {
     "federation_authority_scope_binding": "binding_id",
     "federation_cell_handoff_record": "handoff_id",
     "federation_duty_rotation_record": "rotation_id",
+    "federation_formation_record": "formation_id",
+    "federation_cell_route_decision_receipt": "route_decision_id",
+    "federation_value_flow_route": "route_id",
+    "federation_formation_change_record": "change_id",
 }
 
 
@@ -1946,6 +1966,738 @@ def duty_rotation_semantic_errors(
     return errors
 
 
+
+def formation_record_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Federation Formation Record semantics."""
+    errors: list[str] = []
+    federation_id = document.get("federation_id")
+    status = document.get("formation_status")
+    nodes = document.get("participating_nodes", [])
+    node_ids: list[str] = []
+    assignment_ids: list[str] = []
+    node_map: dict[str, dict[str, Any]] = {}
+    covered_roles: set[str] = set()
+
+    if isinstance(nodes, list):
+        for index, node in enumerate(nodes):
+            if not isinstance(node, dict):
+                continue
+            node_id = node.get("node_id")
+            if isinstance(node_id, str):
+                node_ids.append(node_id)
+                node_map[node_id] = node
+            assignment_ref = node.get("assignment", {})
+            assignment_document: dict[str, Any] | None = None
+            if isinstance(assignment_ref, dict):
+                assignment_id = assignment_ref.get("assignment_id")
+                if isinstance(assignment_id, str):
+                    assignment_ids.append(assignment_id)
+                resolution_status = assignment_ref.get("resolution_status")
+                if resolution_status == "externally_resolved" and not assignment_ref.get("record_ref"):
+                    errors.append(
+                        f"participating_nodes[{index}].assignment.record_ref: required for externally_resolved assignment"
+                    )
+                if resolution_status == "resolved":
+                    assignment_document = known[
+                        "federation_operational_role_assignment"
+                    ].get(assignment_id)
+                    if assignment_document is None:
+                        errors.append(
+                            f"participating_nodes[{index}].assignment.assignment_id: locally resolved record '{assignment_id}' was not found"
+                        )
+                    else:
+                        if assignment_document.get("cell_id") != assignment_ref.get("source_cell_id"):
+                            errors.append(
+                                f"participating_nodes[{index}].assignment.source_cell_id: does not match Role Assignment"
+                            )
+                        if assignment_document.get("federation_id") != federation_id:
+                            errors.append(
+                                f"participating_nodes[{index}].assignment.assignment_id: Role Assignment belongs to another federation"
+                            )
+                        node_status = node.get("node_status")
+                        assignment_status = assignment_document.get("assignment_status")
+                        if node_status == "active" and assignment_status != "active":
+                            errors.append(
+                                f"participating_nodes[{index}].node_status: active node requires an active Role Assignment"
+                            )
+                        if node_status == "standby" and assignment_status not in {"active", "standby"}:
+                            errors.append(
+                                f"participating_nodes[{index}].node_status: standby node requires active or standby Role Assignment"
+                            )
+                        if node_status != "isolated":
+                            role_type = assignment_document.get("role_type")
+                            if isinstance(role_type, str):
+                                covered_roles.add(role_type)
+
+            binding_refs = node.get("authority_binding_refs", [])
+            if isinstance(binding_refs, list):
+                for binding_ref in binding_refs:
+                    if (
+                        isinstance(binding_ref, str)
+                        and binding_ref
+                        not in known["federation_authority_scope_binding"]
+                    ):
+                        errors.append(
+                            f"participating_nodes[{index}].authority_binding_refs: locally referenced binding '{binding_ref}' was not found"
+                        )
+
+    for value in duplicate_values(node_ids):
+        errors.append(f"participating_nodes: duplicate node_id '{value}'")
+    for value in duplicate_values(assignment_ids):
+        errors.append(
+            f"participating_nodes: assignment '{value}' is placed more than once"
+        )
+
+    connections = document.get("connections", [])
+    connection_ids: list[str] = []
+    connection_keys: list[str] = []
+    if isinstance(connections, list):
+        for index, connection in enumerate(connections):
+            if not isinstance(connection, dict):
+                continue
+            connection_id = connection.get("connection_id")
+            if isinstance(connection_id, str):
+                connection_ids.append(connection_id)
+            from_node = connection.get("from_node_id")
+            to_node = connection.get("to_node_id")
+            if isinstance(from_node, str) and isinstance(to_node, str):
+                connection_keys.append(
+                    f"{from_node}|{to_node}|{connection.get('connection_type')}"
+                )
+            if from_node not in node_map:
+                errors.append(
+                    f"connections[{index}].from_node_id: node '{from_node}' was not found"
+                )
+            if to_node not in node_map:
+                errors.append(
+                    f"connections[{index}].to_node_id: node '{to_node}' was not found"
+                )
+            if from_node == to_node:
+                errors.append(
+                    f"connections[{index}]: a connection cannot target its source node"
+                )
+            if (
+                status == "active"
+                and connection.get("required") is True
+                and connection.get("connection_status") != "active"
+            ):
+                errors.append(
+                    f"connections[{index}].connection_status: required connection must be active in an active Formation"
+                )
+
+    for value in duplicate_values(connection_ids):
+        errors.append(f"connections: duplicate connection_id '{value}'")
+    for value in duplicate_values(connection_keys):
+        errors.append(f"connections: duplicate node connection '{value}'")
+
+    required_roles = document.get("required_role_types", [])
+    if isinstance(required_roles, list) and status == "active":
+        for role in required_roles:
+            if isinstance(role, str) and role not in covered_roles:
+                errors.append(
+                    f"required_role_types: active Formation does not cover role '{role}'"
+                )
+
+    fallback = document.get("fallback_policy", {})
+    if isinstance(fallback, dict):
+        fallback_nodes = fallback.get("fallback_node_ids", [])
+        if fallback.get("enabled") is True and not fallback_nodes:
+            errors.append(
+                "fallback_policy.fallback_node_ids: enabled fallback requires at least one node"
+            )
+        if isinstance(fallback_nodes, list):
+            for node_id in fallback_nodes:
+                if node_id not in node_map:
+                    errors.append(
+                        f"fallback_policy.fallback_node_ids: node '{node_id}' was not found"
+                    )
+
+    coordination = document.get("coordination_policy", {})
+    if isinstance(coordination, dict):
+        coordinator_refs = coordination.get("coordinator_refs", [])
+        quorum = coordination.get("quorum")
+        if (
+            isinstance(coordinator_refs, list)
+            and isinstance(quorum, int)
+            and quorum > len(coordinator_refs)
+        ):
+            errors.append(
+                "coordination_policy.quorum: cannot exceed the number of coordinators"
+            )
+
+    if status == "active":
+        if not document.get("activated_at"):
+            errors.append("activated_at: required for active Formation")
+        active_nodes = [
+            node for node in nodes
+            if isinstance(node, dict) and node.get("node_status") == "active"
+        ] if isinstance(nodes, list) else []
+        if not active_nodes:
+            errors.append(
+                "participating_nodes: active Formation requires at least one active node"
+            )
+
+    if document.get("formation_type") == "wagon_fort":
+        positions = {
+            node.get("operational_position")
+            for node in nodes
+            if isinstance(node, dict)
+        } if isinstance(nodes, list) else set()
+        if "core" not in positions:
+            errors.append("participating_nodes: wagon_fort requires a core node")
+        if "perimeter" not in positions:
+            errors.append(
+                "participating_nodes: wagon_fort requires a perimeter node"
+            )
+
+    if status == "suspended":
+        if not document.get("suspended_at"):
+            errors.append("suspended_at: required for suspended Formation")
+        if not document.get("status_reason"):
+            errors.append("status_reason: required for suspended Formation")
+    if status == "retired":
+        if not document.get("retired_at"):
+            errors.append("retired_at: required for retired Formation")
+        if not document.get("status_reason"):
+            errors.append("status_reason: required for retired Formation")
+
+    created_at = parse_datetime(document.get("created_at"))
+    for field in ["activated_at", "suspended_at", "retired_at"]:
+        event_at = parse_datetime(document.get(field))
+        if created_at and event_at and event_at < created_at:
+            errors.append(f"{field}: must not be earlier than created_at")
+
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
+def route_decision_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Cell Route Decision Receipt semantics."""
+    errors: list[str] = []
+    formation_ref = document.get("formation", {})
+    formation_document: dict[str, Any] | None = None
+    if isinstance(formation_ref, dict):
+        formation_id = formation_ref.get("formation_id")
+        if formation_ref.get("resolution_status") == "externally_resolved" and not formation_ref.get("record_ref"):
+            errors.append(
+                "formation.record_ref: required for externally_resolved Formation"
+            )
+        if formation_ref.get("resolution_status") == "resolved":
+            formation_document = known["federation_formation_record"].get(
+                formation_id
+            )
+            if formation_document is None:
+                errors.append(
+                    f"formation.formation_id: locally resolved record '{formation_id}' was not found"
+                )
+            else:
+                if formation_document.get("federation_id") != document.get("federation_id"):
+                    errors.append(
+                        "federation_id: does not match the referenced Formation"
+                    )
+                if document.get("decision_status") == "approved" and formation_document.get("formation_status") != "active":
+                    errors.append(
+                        "formation: approved Route Decision requires an active Formation"
+                    )
+
+    node_map: dict[str, dict[str, Any]] = {}
+    if formation_document is not None:
+        for node in formation_document.get("participating_nodes", []):
+            if isinstance(node, dict) and isinstance(node.get("node_id"), str):
+                node_map[node["node_id"]] = node
+
+    requirements = document.get("route_requirements", {})
+    max_hops = requirements.get("max_hops") if isinstance(requirements, dict) else None
+    candidate_routes = document.get("candidate_routes", [])
+    candidate_ids: list[str] = []
+    candidate_map: dict[str, dict[str, Any]] = {}
+    eligible_scores: list[float] = []
+
+    if isinstance(candidate_routes, list):
+        for index, candidate in enumerate(candidate_routes):
+            if not isinstance(candidate, dict):
+                continue
+            candidate_id = candidate.get("candidate_id")
+            if isinstance(candidate_id, str):
+                candidate_ids.append(candidate_id)
+                candidate_map[candidate_id] = candidate
+            path = candidate.get("node_path", [])
+            if isinstance(path, list):
+                repeated = duplicate_values([x for x in path if isinstance(x, str)])
+                for node_id in repeated:
+                    errors.append(
+                        f"candidate_routes[{index}].node_path: node '{node_id}' is repeated"
+                    )
+                if isinstance(max_hops, int) and len(path) > max_hops:
+                    errors.append(
+                        f"candidate_routes[{index}].node_path: exceeds max_hops {max_hops}"
+                    )
+                for node_id in path:
+                    if node_id not in node_map:
+                        errors.append(
+                            f"candidate_routes[{index}].node_path: Formation node '{node_id}' was not found"
+                        )
+
+                roles: set[str] = set()
+                caps: set[str] = set()
+                for node_id in path:
+                    node = node_map.get(node_id)
+                    if not isinstance(node, dict):
+                        continue
+                    assignment_ref = node.get("assignment", {})
+                    assignment = None
+                    if isinstance(assignment_ref, dict):
+                        assignment = known[
+                            "federation_operational_role_assignment"
+                        ].get(assignment_ref.get("assignment_id"))
+                    if isinstance(assignment, dict):
+                        role_type = assignment.get("role_type")
+                        if isinstance(role_type, str):
+                            roles.add(role_type)
+                        assigned = assignment.get("assigned_capabilities", [])
+                        if isinstance(assigned, list):
+                            caps.update(x for x in assigned if isinstance(x, str))
+
+                if candidate.get("candidate_status") == "eligible" and isinstance(requirements, dict):
+                    for role in requirements.get("required_role_types", []):
+                        if role not in roles:
+                            errors.append(
+                                f"candidate_routes[{index}]: eligible candidate does not cover required role '{role}'"
+                            )
+                    for capability in requirements.get("required_capabilities", []):
+                        if capability not in caps:
+                            errors.append(
+                                f"candidate_routes[{index}]: eligible candidate does not cover required capability '{capability}'"
+                            )
+                    if requirements.get("audit_required") is True and "auditor" not in roles:
+                        errors.append(
+                            f"candidate_routes[{index}]: audit_required candidate must include an auditor"
+                        )
+                if candidate.get("candidate_status") == "rejected" and not candidate.get("rejection_reason"):
+                    errors.append(
+                        f"candidate_routes[{index}].rejection_reason: required for rejected candidate"
+                    )
+            if candidate.get("candidate_status") == "eligible" and isinstance(candidate.get("score"), (int, float)):
+                eligible_scores.append(float(candidate["score"]))
+
+    for value in duplicate_values(candidate_ids):
+        errors.append(f"candidate_routes: duplicate candidate_id '{value}'")
+
+    status = document.get("decision_status")
+    selected_id = document.get("selected_candidate_id")
+    fallback_id = document.get("fallback_candidate_id")
+    if status == "approved":
+        selected = candidate_map.get(selected_id)
+        if selected is None:
+            errors.append(
+                "selected_candidate_id: approved decision must select an existing candidate"
+            )
+        elif selected.get("candidate_status") != "eligible":
+            errors.append(
+                "selected_candidate_id: approved decision must select an eligible candidate"
+            )
+        elif eligible_scores and float(selected.get("score", 0)) < max(eligible_scores) and not document.get("selection_override_ref"):
+            errors.append(
+                "selected_candidate_id: lower-scoring candidate requires selection_override_ref"
+            )
+        if not isinstance(document.get("decision"), dict):
+            errors.append("decision: required for approved Route Decision")
+        if isinstance(requirements, dict) and requirements.get("fallback_required") is True:
+            fallback = candidate_map.get(fallback_id)
+            if fallback is None or fallback.get("candidate_status") != "eligible":
+                errors.append(
+                    "fallback_candidate_id: fallback_required decision needs an eligible fallback candidate"
+                )
+            if fallback_id == selected_id:
+                errors.append(
+                    "fallback_candidate_id: must differ from selected_candidate_id"
+                )
+
+    if status == "revoked":
+        if not document.get("revoked_at"):
+            errors.append("revoked_at: required for revoked Route Decision")
+        if not document.get("revocation_reason"):
+            errors.append(
+                "revocation_reason: required for revoked Route Decision"
+            )
+
+    errors.extend(decision_time_errors(document))
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
+def value_flow_route_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Federation Value Flow Route semantics."""
+    errors: list[str] = []
+    formation_document: dict[str, Any] | None = None
+    decision_document: dict[str, Any] | None = None
+
+    formation_ref = document.get("formation", {})
+    if isinstance(formation_ref, dict):
+        if formation_ref.get("resolution_status") == "externally_resolved" and not formation_ref.get("record_ref"):
+            errors.append(
+                "formation.record_ref: required for externally_resolved Formation"
+            )
+        if formation_ref.get("resolution_status") == "resolved":
+            formation_id = formation_ref.get("formation_id")
+            formation_document = known["federation_formation_record"].get(
+                formation_id
+            )
+            if formation_document is None:
+                errors.append(
+                    f"formation.formation_id: locally resolved record '{formation_id}' was not found"
+                )
+
+    decision_ref = document.get("route_decision", {})
+    if isinstance(decision_ref, dict):
+        if decision_ref.get("resolution_status") == "externally_resolved" and not decision_ref.get("record_ref"):
+            errors.append(
+                "route_decision.record_ref: required for externally_resolved Route Decision"
+            )
+        if decision_ref.get("resolution_status") == "resolved":
+            route_decision_id = decision_ref.get("route_decision_id")
+            decision_document = known[
+                "federation_cell_route_decision_receipt"
+            ].get(route_decision_id)
+            if decision_document is None:
+                errors.append(
+                    f"route_decision.route_decision_id: locally resolved record '{route_decision_id}' was not found"
+                )
+            elif decision_document.get("decision_status") != "approved":
+                errors.append(
+                    "route_decision: Value Flow Route requires an approved Route Decision"
+                )
+
+    node_map: dict[str, dict[str, Any]] = {}
+    if formation_document is not None:
+        if formation_document.get("federation_id") != document.get("federation_id"):
+            errors.append("federation_id: does not match Formation")
+        for node in formation_document.get("participating_nodes", []):
+            if isinstance(node, dict) and isinstance(node.get("node_id"), str):
+                node_map[node["node_id"]] = node
+
+    selected_candidate: dict[str, Any] | None = None
+    if decision_document is not None:
+        for field in ["federation_id", "operation_id", "route_type"]:
+            if document.get(field) != decision_document.get(field):
+                errors.append(f"{field}: does not match Route Decision")
+        selected_id = document.get("selected_candidate_id")
+        if selected_id != decision_document.get("selected_candidate_id"):
+            errors.append(
+                "selected_candidate_id: does not match Route Decision"
+            )
+        if document.get("fallback_candidate_id") != decision_document.get("fallback_candidate_id"):
+            errors.append(
+                "fallback_candidate_id: does not match Route Decision"
+            )
+        for candidate in decision_document.get("candidate_routes", []):
+            if isinstance(candidate, dict) and candidate.get("candidate_id") == selected_id:
+                selected_candidate = candidate
+                break
+
+    stages = document.get("stages", [])
+    stage_ids: list[str] = []
+    sequences: list[int] = []
+    stage_node_path: list[str] = []
+    active_count = 0
+    if isinstance(stages, list):
+        for index, stage in enumerate(stages):
+            if not isinstance(stage, dict):
+                continue
+            stage_id = stage.get("stage_id")
+            sequence = stage.get("sequence")
+            node_id = stage.get("node_id")
+            if isinstance(stage_id, str):
+                stage_ids.append(stage_id)
+            if isinstance(sequence, int):
+                sequences.append(sequence)
+            if isinstance(node_id, str):
+                stage_node_path.append(node_id)
+            if stage.get("stage_status") == "active":
+                active_count += 1
+
+            node = node_map.get(node_id)
+            if node is None:
+                errors.append(
+                    f"stages[{index}].node_id: Formation node '{node_id}' was not found"
+                )
+                continue
+            assignment_ref = node.get("assignment", {})
+            assignment_id = assignment_ref.get("assignment_id") if isinstance(assignment_ref, dict) else None
+            if stage.get("assignment_id") != assignment_id:
+                errors.append(
+                    f"stages[{index}].assignment_id: does not match Formation node assignment"
+                )
+            assignment = known["federation_operational_role_assignment"].get(
+                assignment_id
+            )
+            if isinstance(assignment, dict):
+                if stage.get("role_type") != assignment.get("role_type"):
+                    errors.append(
+                        f"stages[{index}].role_type: does not match Role Assignment"
+                    )
+                assigned_caps = set(
+                    x for x in assignment.get("assigned_capabilities", [])
+                    if isinstance(x, str)
+                )
+                for capability in stage.get("required_capabilities", []):
+                    if capability not in assigned_caps:
+                        errors.append(
+                            f"stages[{index}].required_capabilities: capability '{capability}' is not assigned upstream"
+                        )
+
+    for value in duplicate_values(stage_ids):
+        errors.append(f"stages: duplicate stage_id '{value}'")
+    if sequences and sorted(sequences) != list(range(1, len(sequences) + 1)):
+        errors.append("stages.sequence: values must be contiguous and start at 1")
+    if selected_candidate is not None and stage_node_path != selected_candidate.get("node_path"):
+        errors.append(
+            "stages.node_id: stage path does not match the selected Route Decision candidate"
+        )
+
+    constraints = document.get("route_constraints", {})
+    if isinstance(constraints, dict):
+        max_hops = constraints.get("max_hops")
+        if isinstance(max_hops, int) and len(stage_node_path) > max_hops:
+            errors.append("stages: route exceeds route_constraints.max_hops")
+        if constraints.get("audit_required") is True:
+            role_types = {
+                stage.get("role_type")
+                for stage in stages
+                if isinstance(stage, dict)
+            } if isinstance(stages, list) else set()
+            if "auditor" not in role_types:
+                errors.append("stages: audit_required route must include an auditor")
+
+    status = document.get("route_status")
+    if status == "active":
+        if not document.get("activated_at"):
+            errors.append("activated_at: required for active Value Flow Route")
+        if active_count != 1:
+            errors.append(
+                "stages: active Value Flow Route requires exactly one active stage"
+            )
+    if status == "completed":
+        if not document.get("completed_at"):
+            errors.append("completed_at: required for completed Value Flow Route")
+        incomplete = [
+            stage for stage in stages
+            if isinstance(stage, dict) and stage.get("stage_status") != "completed"
+        ] if isinstance(stages, list) else []
+        if incomplete:
+            errors.append(
+                "stages: completed Value Flow Route requires every stage to be completed"
+            )
+    lifecycle_fields = {
+        "suspended": "suspended_at",
+        "failed": "failed_at",
+        "cancelled": "cancelled_at",
+    }
+    if status in lifecycle_fields:
+        field = lifecycle_fields[status]
+        if not document.get(field):
+            errors.append(f"{field}: required for {status} Value Flow Route")
+        if not document.get("status_reason"):
+            errors.append(
+                f"status_reason: required for {status} Value Flow Route"
+            )
+
+    created_at = parse_datetime(document.get("created_at"))
+    for field in ["activated_at", "completed_at", "suspended_at", "failed_at", "cancelled_at"]:
+        value = parse_datetime(document.get(field))
+        if created_at and value and value < created_at:
+            errors.append(f"{field}: must not be earlier than created_at")
+
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
+def formation_change_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Federation Formation Change Record semantics."""
+    errors: list[str] = []
+    formation_ref = document.get("formation", {})
+    formation_document: dict[str, Any] | None = None
+    if isinstance(formation_ref, dict):
+        if formation_ref.get("resolution_status") == "externally_resolved" and not formation_ref.get("record_ref"):
+            errors.append(
+                "formation.record_ref: required for externally_resolved Formation"
+            )
+        if formation_ref.get("resolution_status") == "resolved":
+            formation_id = formation_ref.get("formation_id")
+            formation_document = known["federation_formation_record"].get(
+                formation_id
+            )
+            if formation_document is None:
+                errors.append(
+                    f"formation.formation_id: locally resolved record '{formation_id}' was not found"
+                )
+            elif formation_document.get("federation_id") != document.get("federation_id"):
+                errors.append("federation_id: does not match Formation")
+
+    node_map: dict[str, dict[str, Any]] = {}
+    connection_map: dict[str, dict[str, Any]] = {}
+    if formation_document is not None:
+        for node in formation_document.get("participating_nodes", []):
+            if isinstance(node, dict) and isinstance(node.get("node_id"), str):
+                node_map[node["node_id"]] = dict(node)
+        for connection in formation_document.get("connections", []):
+            if isinstance(connection, dict) and isinstance(connection.get("connection_id"), str):
+                connection_map[connection["connection_id"]] = dict(connection)
+
+    operations = document.get("operations", [])
+    operation_ids: list[str] = []
+    operation_keys: list[str] = []
+    if isinstance(operations, list):
+        for index, operation in enumerate(operations):
+            if not isinstance(operation, dict):
+                continue
+            operation_id = operation.get("operation_id")
+            if isinstance(operation_id, str):
+                operation_ids.append(operation_id)
+            op_type = operation.get("operation_type")
+            target_type = operation.get("target_type")
+            target_id = operation.get("target_id")
+            operation_keys.append(f"{op_type}|{target_type}|{target_id}")
+            if target_type == "node":
+                exists = target_id in node_map
+                if op_type == "add_node":
+                    if exists:
+                        errors.append(
+                            f"operations[{index}].target_id: added node already exists"
+                        )
+                    if not isinstance(operation.get("new_assignment"), dict):
+                        errors.append(
+                            f"operations[{index}].new_assignment: required for add_node"
+                        )
+                elif not exists:
+                    errors.append(
+                        f"operations[{index}].target_id: Formation node '{target_id}' was not found"
+                    )
+                if op_type == "update_node_status":
+                    if not operation.get("new_node_status"):
+                        errors.append(
+                            f"operations[{index}].new_node_status: required"
+                        )
+                    elif exists:
+                        node_map[target_id]["node_status"] = operation["new_node_status"]
+                if op_type == "update_position" and not operation.get("new_position"):
+                    errors.append(
+                        f"operations[{index}].new_position: required"
+                    )
+                if op_type == "replace_assignment":
+                    new_assignment = operation.get("new_assignment")
+                    if not isinstance(new_assignment, dict):
+                        errors.append(
+                            f"operations[{index}].new_assignment: required"
+                        )
+                    elif new_assignment.get("resolution_status") == "resolved":
+                        assignment_id = new_assignment.get("assignment_id")
+                        assignment = known[
+                            "federation_operational_role_assignment"
+                        ].get(assignment_id)
+                        if assignment is None:
+                            errors.append(
+                                f"operations[{index}].new_assignment.assignment_id: locally resolved record '{assignment_id}' was not found"
+                            )
+                        elif exists:
+                            node_map[target_id]["assignment"] = new_assignment
+                if op_type == "remove_node" and exists:
+                    node_map.pop(target_id, None)
+            elif target_type == "connection":
+                exists = target_id in connection_map
+                if op_type == "add_connection":
+                    if exists:
+                        errors.append(
+                            f"operations[{index}].target_id: added connection already exists"
+                        )
+                elif not exists:
+                    errors.append(
+                        f"operations[{index}].target_id: Formation connection '{target_id}' was not found"
+                    )
+                if op_type == "update_connection_status" and not operation.get("new_connection_status"):
+                    errors.append(
+                        f"operations[{index}].new_connection_status: required"
+                    )
+
+    for value in duplicate_values(operation_ids):
+        errors.append(f"operations: duplicate operation_id '{value}'")
+    for value in duplicate_values(operation_keys):
+        errors.append(f"operations: duplicate operation target '{value}'")
+
+    status = document.get("change_status")
+    if status == "applied":
+        if not document.get("applied_at"):
+            errors.append("applied_at: required for applied Formation Change")
+        if formation_document is not None:
+            covered_roles: set[str] = set()
+            for node in node_map.values():
+                if node.get("node_status") == "isolated":
+                    continue
+                assignment_ref = node.get("assignment", {})
+                assignment_id = assignment_ref.get("assignment_id") if isinstance(assignment_ref, dict) else None
+                assignment = known[
+                    "federation_operational_role_assignment"
+                ].get(assignment_id)
+                if isinstance(assignment, dict) and isinstance(assignment.get("role_type"), str):
+                    covered_roles.add(assignment["role_type"])
+            for role in formation_document.get("required_role_types", []):
+                if role not in covered_roles:
+                    errors.append(
+                        f"operations: applied Formation Change removes required role coverage for '{role}'"
+                    )
+
+    if document.get("trigger_type") == "incident" and not document.get("incident_ref"):
+        errors.append("incident_ref: required for incident-triggered Formation Change")
+    if status == "rejected":
+        if not document.get("rejected_at"):
+            errors.append("rejected_at: required for rejected Formation Change")
+        if not document.get("status_reason"):
+            errors.append("status_reason: required for rejected Formation Change")
+    if status == "rolled_back":
+        if not document.get("rolled_back_at"):
+            errors.append("rolled_back_at: required for rolled_back Formation Change")
+        if not document.get("rollback_ref"):
+            errors.append("rollback_ref: required for rolled_back Formation Change")
+        if not document.get("status_reason"):
+            errors.append("status_reason: required for rolled_back Formation Change")
+
+    route_impacts = document.get("route_impacts", [])
+    if isinstance(route_impacts, list):
+        route_ids: list[str] = []
+        for index, impact in enumerate(route_impacts):
+            if not isinstance(impact, dict):
+                continue
+            route_id = impact.get("route_id")
+            if isinstance(route_id, str):
+                route_ids.append(route_id)
+                if route_id not in known["federation_value_flow_route"]:
+                    errors.append(
+                        f"route_impacts[{index}].route_id: locally referenced route '{route_id}' was not found"
+                    )
+            if impact.get("required_action") == "activate_fallback_candidate" and not impact.get("candidate_id"):
+                errors.append(
+                    f"route_impacts[{index}].candidate_id: required when activating fallback candidate"
+                )
+        for value in duplicate_values(route_ids):
+            errors.append(f"route_impacts: duplicate route_id '{value}'")
+
+    errors.extend(decision_time_errors(document))
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
 def semantic_errors(
     document: dict[str, Any],
     known: KnownRecords,
@@ -1976,6 +2728,18 @@ def semantic_errors(
 
     if record_type == "federation_duty_rotation_record":
         return duty_rotation_semantic_errors(document, known)
+
+    if record_type == "federation_formation_record":
+        return formation_record_semantic_errors(document, known)
+
+    if record_type == "federation_cell_route_decision_receipt":
+        return route_decision_semantic_errors(document, known)
+
+    if record_type == "federation_value_flow_route":
+        return value_flow_route_semantic_errors(document, known)
+
+    if record_type == "federation_formation_change_record":
+        return formation_change_semantic_errors(document, known)
 
     return [
         f"record_type: no semantic validator for '{record_type}'"
