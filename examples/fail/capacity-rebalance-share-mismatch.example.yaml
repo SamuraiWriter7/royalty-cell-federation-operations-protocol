@@ -1,0 +1,54 @@
+after_distribution:
+- assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+  node_id: audit-perimeter
+  share: 0.4
+- assignment_id: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+  node_id: reserve-audit
+  share: 0.6
+applied_at: '2026-07-25T17:42:00+09:00'
+before_distribution:
+- assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+  node_id: audit-perimeter
+  share: 0.75
+- assignment_id: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+  node_id: reserve-audit
+  share: 0.35
+decision:
+  authorization_ref: urn:authorization:kazene:audit-capacity-rebalancing:v0.5
+  decided_at: '2026-07-25T17:40:00+09:00'
+  decided_by_refs:
+  - urn:royalty-federation-member:kazene:coordinator
+  policy_ref: urn:royalty-operations-policy:kazene:capacity-rebalancing:v1
+  rationale: Shift the majority of new audit workload to the reserve auditor during
+    the replacement window.
+evidence:
+- evidence_id: urn:royalty-evidence:kazene:capacity-rebalance:audit-load:v0.5
+  evidence_ref: urn:royalty-load-snapshot:kazene:audit:v0.5
+  evidence_type: load_snapshot
+  recorded_at: '2026-07-25T17:42:00+09:00'
+federation_id: urn:royalty-federation:kazene:royalty-network
+formation:
+  formation_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  record_ref: examples/pass/federation-formation-record.example.yaml
+  resolution_status: resolved
+issued_at: '2026-07-25T17:41:00+09:00'
+metric:
+  metric_ref: urn:royalty-capacity-metric:kazene:audit-workload:v0.5
+  metric_type: workload_share
+  observation_window: PT30M
+  unit: normalized_share
+normalization:
+  basis: sum_to_one
+  tolerance: 1.0e-06
+plan:
+  plan_id: urn:royalty-reconfiguration-plan:kazene:audit-resilience:v0.5
+  record_ref: examples/pass/federation-reconfiguration-plan.example.yaml
+  resolution_status: resolved
+rebalance_effect: capacity_rebalancing_only
+rebalance_id: urn:royalty-capacity-rebalance:kazene:share-mismatch:v0.5
+rebalance_status: applied
+record_type: federation_capacity_rebalancing_receipt
+related_replacement_refs:
+- urn:royalty-cell-replacement:kazene:audit-perimeter:v0.5
+schema_version: 0.5.0
+visibility: public
