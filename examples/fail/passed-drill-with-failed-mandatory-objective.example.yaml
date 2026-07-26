@@ -1,0 +1,93 @@
+completed_at: '2026-07-25T18:22:00+09:00'
+drill_effect: drill_record_only
+drill_id: urn:royalty-federation-drill:kazene:false-pass:v0.5
+drill_status: completed
+drill_type: failover
+environment: simulation
+evidence:
+- evidence_id: urn:royalty-evidence:kazene:federation-drill:audit-failover:v0.5
+  evidence_ref: urn:royalty-drill-result:kazene:audit-failover:v0.5
+  evidence_type: exercise_result
+  recorded_at: '2026-07-25T18:22:00+09:00'
+execution_refs:
+- record_id: urn:royalty-reconfiguration-plan:kazene:audit-resilience:v0.5
+  record_ref: examples/pass/federation-reconfiguration-plan.example.yaml
+  record_type: reconfiguration_plan
+  resolution_status: resolved
+- record_id: urn:royalty-cell-replacement:kazene:audit-perimeter:v0.5
+  record_ref: examples/pass/cell-replacement-record.example.yaml
+  record_type: cell_replacement
+  resolution_status: resolved
+- record_id: urn:royalty-capacity-rebalance:kazene:audit-load:v0.5
+  record_ref: examples/pass/capacity-rebalancing-receipt.example.yaml
+  record_type: capacity_rebalance
+  resolution_status: resolved
+federation_id: urn:royalty-federation:kazene:royalty-network
+formation:
+  formation_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  record_ref: examples/pass/federation-formation-record.example.yaml
+  resolution_status: resolved
+improvement_actions:
+- action: Automate the threshold that recommends audit capacity rebalancing.
+  action_id: automate-capacity-threshold
+  owner_refs:
+  - urn:royalty-federation-member:kazene:coordinator
+  priority: medium
+  status: accepted
+objectives:
+- mandatory: true
+  objective_id: approve-reconfiguration
+  requirement_type: reconfiguration
+  success_criteria: An approved plan preserves all mandatory Formation roles and contains
+    a rollback path.
+- mandatory: true
+  objective_id: replace-auditor
+  requirement_type: cell_replacement
+  success_criteria: The reserve assignment accepts audit duty without capability expansion.
+- mandatory: true
+  objective_id: rebalance-load
+  requirement_type: capacity_rebalance
+  success_criteria: Before and after workload shares each normalize to one.
+- mandatory: true
+  objective_id: preserve-audit
+  requirement_type: audit_coverage
+  success_criteria: At least one authorized auditor remains available throughout the
+    exercise.
+outcome: passed
+reconfiguration_plan:
+  plan_id: urn:royalty-reconfiguration-plan:kazene:audit-resilience:v0.5
+  record_ref: examples/pass/federation-reconfiguration-plan.example.yaml
+  resolution_status: resolved
+record_type: federation_drill_record
+results:
+- evidence_refs:
+  - urn:royalty-evidence:kazene:drill:plan:v0.5
+  objective_id: approve-reconfiguration
+  observed_at: '2026-07-25T18:05:00+09:00'
+  status: pass
+- evidence_refs:
+  - urn:royalty-evidence:kazene:drill:replacement:v0.5
+  objective_id: replace-auditor
+  observed_at: '2026-07-25T18:10:00+09:00'
+  status: fail
+- evidence_refs:
+  - urn:royalty-evidence:kazene:drill:rebalance:v0.5
+  objective_id: rebalance-load
+  observed_at: '2026-07-25T18:15:00+09:00'
+  status: pass
+- evidence_refs:
+  - urn:royalty-evidence:kazene:drill:audit-coverage:v0.5
+  objective_id: preserve-audit
+  observed_at: '2026-07-25T18:20:00+09:00'
+  status: pass
+scenario:
+  injected_conditions:
+  - primary_auditor_unavailable
+  - audit_queue_spike
+  notes: The drill used synthetic records and did not alter live settlement state.
+  protected_live_operations: true
+  scenario_ref: urn:royalty-drill-scenario:kazene:primary-auditor-loss:v1
+scheduled_at: '2026-07-25T18:00:00+09:00'
+schema_version: 0.5.0
+started_at: '2026-07-25T18:02:00+09:00'
+visibility: public
