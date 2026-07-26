@@ -1,0 +1,441 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://royalty-cell-federation-operations-protocol.example/schemas/federation-reconfiguration-plan.schema.json",
+  "title": "Federation Reconfiguration Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "plan_id",
+    "federation_id",
+    "formation",
+    "trigger_type",
+    "plan_status",
+    "objective",
+    "required_role_types",
+    "proposed_operations",
+    "risk_assessment",
+    "plan_effect",
+    "created_at",
+    "evidence",
+    "visibility"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.5.0"
+    },
+    "record_type": {
+      "const": "federation_reconfiguration_plan"
+    },
+    "plan_id": {
+      "type": "string",
+      "pattern": "^urn:royalty-reconfiguration-plan:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "federation_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "formation": {
+      "$ref": "#/$defs/formationRef"
+    },
+    "trigger_type": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "capacity",
+        "incident",
+        "topology_change",
+        "policy_change",
+        "drill_result",
+        "manual",
+        "other"
+      ]
+    },
+    "plan_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "approved",
+        "executing",
+        "completed",
+        "cancelled",
+        "superseded"
+      ]
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 5000
+    },
+    "required_role_types": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "proposed_operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/operation"
+      }
+    },
+    "rollback_operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/operation"
+      }
+    },
+    "rollback_policy_ref": {
+      "$ref": "#/$defs/reference"
+    },
+    "risk_assessment": {
+      "$ref": "#/$defs/riskAssessment"
+    },
+    "decision": {
+      "$ref": "#/$defs/decision"
+    },
+    "execution_refs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/reference"
+      }
+    },
+    "plan_effect": {
+      "const": "reconfiguration_plan_only"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "cancelled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3000
+    },
+    "superseded_by_ref": {
+      "$ref": "#/$defs/reference"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "members",
+        "restricted"
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "formationRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "formation_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "formation_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-formation:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "planRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "plan_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-reconfiguration-plan:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "assignmentRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignment_id",
+        "resolution_status"
+      ],
+      "properties": {
+        "assignment_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "externally_resolved",
+            "unresolved"
+          ]
+        },
+        "record_ref": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decided_by_refs",
+        "decided_at",
+        "policy_ref",
+        "authorization_ref",
+        "rationale"
+      ],
+      "properties": {
+        "decided_by_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "policy_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "authorization_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "operation_type",
+        "target_id",
+        "reason"
+      ],
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "operation_type": {
+          "type": "string",
+          "enum": [
+            "add_node",
+            "remove_node",
+            "replace_assignment",
+            "update_node_status",
+            "update_position",
+            "add_connection",
+            "remove_connection",
+            "activate_route",
+            "suspend_route",
+            "rebalance_capacity"
+          ]
+        },
+        "target_id": {
+          "$ref": "#/$defs/reference"
+        },
+        "source_assignment_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "replacement_assignment_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-role-assignment:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "new_node_status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "standby",
+            "isolated",
+            "retired"
+          ]
+        },
+        "new_position": {
+          "type": "string",
+          "enum": [
+            "core",
+            "perimeter",
+            "relay",
+            "gateway",
+            "reserve",
+            "observer"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    },
+    "riskAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "risk_level",
+        "affected_node_ids",
+        "affected_route_ids",
+        "failure_modes",
+        "mitigation_refs"
+      ],
+      "properties": {
+        "risk_level": {
+          "type": "string",
+          "enum": [
+            "low",
+            "moderate",
+            "high",
+            "critical"
+          ]
+        },
+        "affected_node_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "affected_route_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        },
+        "failure_modes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "mitigation_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "evidence_type",
+        "evidence_ref",
+        "recorded_at"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^urn:royalty-evidence:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*)+$"
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "reconfiguration_plan",
+            "formation_snapshot",
+            "capacity_report",
+            "incident_record",
+            "drill_result",
+            "approval_record",
+            "other"
+          ]
+        },
+        "evidence_ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        }
+      }
+    }
+  }
+}
