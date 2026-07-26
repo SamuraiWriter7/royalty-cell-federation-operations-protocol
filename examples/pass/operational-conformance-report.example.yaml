@@ -1,0 +1,83 @@
+schema_version: 0.5.0
+record_type: federation_operational_conformance_report
+report_id: urn:royalty-operational-conformance-report:kazene:v0.5
+federation_id: urn:royalty-federation:kazene:royalty-network
+formation:
+  formation_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  resolution_status: resolved
+  record_ref: examples/pass/federation-formation-record.example.yaml
+protocol_version: 0.5.0
+report_status: final
+evaluated_records:
+- record_type: formation
+  record_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  resolution_status: resolved
+  record_ref: examples/pass/federation-formation-record.example.yaml
+  required: true
+- record_type: reconfiguration_plan
+  record_id: urn:royalty-reconfiguration-plan:kazene:audit-resilience:v0.5
+  resolution_status: resolved
+  record_ref: examples/pass/federation-reconfiguration-plan.example.yaml
+  required: true
+- record_type: cell_replacement
+  record_id: urn:royalty-cell-replacement:kazene:audit-perimeter:v0.5
+  resolution_status: resolved
+  record_ref: examples/pass/cell-replacement-record.example.yaml
+  required: true
+- record_type: capacity_rebalance
+  record_id: urn:royalty-capacity-rebalance:kazene:audit-load:v0.5
+  resolution_status: resolved
+  record_ref: examples/pass/capacity-rebalancing-receipt.example.yaml
+  required: true
+- record_type: federation_drill
+  record_id: urn:royalty-federation-drill:kazene:audit-failover:v0.5
+  resolution_status: resolved
+  record_ref: examples/pass/federation-drill-record.example.yaml
+  required: true
+checks:
+- check_id: reconfiguration-safety
+  category: reconfiguration
+  required: true
+  status: pass
+  subject_refs:
+  - urn:royalty-reconfiguration-plan:kazene:audit-resilience:v0.5
+- check_id: replacement-authority
+  category: replacement
+  required: true
+  status: pass
+  subject_refs:
+  - urn:royalty-cell-replacement:kazene:audit-perimeter:v0.5
+- check_id: capacity-normalization
+  category: capacity
+  required: true
+  status: pass
+  subject_refs:
+  - urn:royalty-capacity-rebalance:kazene:audit-load:v0.5
+- check_id: drill-objectives
+  category: drill
+  required: true
+  status: pass
+  subject_refs:
+  - urn:royalty-federation-drill:kazene:audit-failover:v0.5
+- check_id: evidence-integrity
+  category: evidence
+  required: true
+  status: pass
+  subject_refs:
+  - urn:royalty-validator-output:kazene:v0.5
+conformance_status: conformant
+findings: []
+exceptions: []
+remediation_actions: []
+assessed_by_refs:
+- urn:royalty-cell-member:kazene:auditor
+- urn:royalty-federation-member:kazene:coordinator
+assessed_at: '2026-07-25T18:30:00+09:00'
+valid_until: '2026-08-25T18:30:00+09:00'
+report_effect: operational_conformance_report_only
+evidence:
+- evidence_id: urn:royalty-evidence:kazene:operational-conformance:v0.5
+  evidence_type: validator_output
+  evidence_ref: urn:royalty-validator-output:kazene:v0.5
+  recorded_at: '2026-07-25T18:30:00+09:00'
+visibility: public
