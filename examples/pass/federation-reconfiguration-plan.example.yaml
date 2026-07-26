@@ -1,0 +1,76 @@
+schema_version: 0.5.0
+record_type: federation_reconfiguration_plan
+plan_id: urn:royalty-reconfiguration-plan:kazene:audit-resilience:v0.5
+federation_id: urn:royalty-federation:kazene:royalty-network
+formation:
+  formation_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  resolution_status: resolved
+  record_ref: examples/pass/federation-formation-record.example.yaml
+trigger_type: capacity
+plan_status: approved
+objective: Replace the primary audit assignment with the reserve Cell and preserve
+  audit coverage during sustained load.
+required_role_types:
+- origin_authority
+- usage_router
+- auditor
+proposed_operations:
+- operation_id: remove-reserve-node
+  operation_type: remove_node
+  target_id: reserve-audit
+  reason: Remove the separate reserve position before assigning the same reserve Cell
+    to the audit perimeter.
+- operation_id: replace-audit-assignment
+  operation_type: replace_assignment
+  target_id: audit-perimeter
+  source_assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+  replacement_assignment_id: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+  reason: Move the verified reserve auditor into the perimeter duty position.
+- operation_id: activate-fallback-route
+  operation_type: activate_route
+  target_id: urn:royalty-value-route:kazene:origin-routing:v0.3
+  reason: Continue the declared audit path while the replacement is applied.
+rollback_operations:
+- operation_id: restore-primary-assignment
+  operation_type: replace_assignment
+  target_id: audit-perimeter
+  source_assignment_id: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+  replacement_assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+  reason: Restore the original primary auditor if replacement verification fails.
+- operation_id: restore-reserve-node
+  operation_type: add_node
+  target_id: reserve-audit
+  replacement_assignment_id: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+  reason: Restore the reserve node after rolling back the assignment replacement.
+rollback_policy_ref: urn:royalty-operations-policy:kazene:reconfiguration-rollback:v1
+risk_assessment:
+  risk_level: moderate
+  affected_node_ids:
+  - audit-perimeter
+  - reserve-audit
+  affected_route_ids:
+  - urn:royalty-value-route:kazene:origin-routing:v0.3
+  failure_modes:
+  - duplicate_assignment
+  - audit_coverage_gap
+  - route_interruption
+  mitigation_refs:
+  - urn:royalty-operations-policy:kazene:dual-audit-check:v1
+  - urn:royalty-operations-policy:kazene:rollback:v1
+decision:
+  decided_by_refs:
+  - urn:royalty-federation-member:kazene:coordinator
+  decided_at: '2026-07-25T17:20:00+09:00'
+  policy_ref: urn:royalty-operations-policy:kazene:reconfiguration:v1
+  authorization_ref: urn:authorization:kazene:audit-reconfiguration:v0.5
+  rationale: The reserve auditor has equivalent bounded capabilities and may replace
+    the overloaded primary assignment without removing mandatory audit coverage.
+plan_effect: reconfiguration_plan_only
+created_at: '2026-07-25T17:15:00+09:00'
+approved_at: '2026-07-25T17:21:00+09:00'
+evidence:
+- evidence_id: urn:royalty-evidence:kazene:reconfiguration-plan:audit-resilience:v0.5
+  evidence_type: capacity_report
+  evidence_ref: urn:royalty-capacity-report:kazene:audit-load:v0.5
+  recorded_at: '2026-07-25T17:15:00+09:00'
+visibility: public
