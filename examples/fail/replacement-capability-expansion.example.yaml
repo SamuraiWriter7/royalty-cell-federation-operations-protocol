@@ -1,0 +1,66 @@
+acknowledgements:
+  coordinator:
+    acknowledged_at: '2026-07-25T17:30:00+09:00'
+    actor_refs:
+    - urn:royalty-federation-member:kazene:coordinator
+    status: accepted
+  source:
+    acknowledged_at: '2026-07-25T17:28:00+09:00'
+    actor_refs:
+    - urn:royalty-cell-member:kazene:primary-auditor
+    status: accepted
+  target:
+    acknowledged_at: '2026-07-25T17:29:00+09:00'
+    actor_refs:
+    - urn:royalty-cell-member:kazene:reserve-auditor
+    status: accepted
+authority_preservation: exact
+completed_at: '2026-07-25T17:35:00+09:00'
+decision:
+  authorization_ref: urn:authorization:kazene:audit-cell-replacement:v0.5
+  decided_at: '2026-07-25T17:25:00+09:00'
+  decided_by_refs:
+  - urn:royalty-federation-member:kazene:coordinator
+  policy_ref: urn:royalty-operations-policy:kazene:cell-replacement:v1
+  rationale: Replace the overloaded primary auditor with the verified reserve assignment
+    while preserving the exact audit authority boundary.
+effective_at: '2026-07-25T17:31:00+09:00'
+evidence:
+- evidence_id: urn:royalty-evidence:kazene:cell-replacement:audit-perimeter:v0.5
+  evidence_ref: urn:royalty-formation-change:kazene:audit-replacement:v0.5
+  evidence_type: execution_record
+  recorded_at: '2026-07-25T17:35:00+09:00'
+execution_ref: urn:royalty-formation-change:kazene:audit-replacement:v0.5
+federation_id: urn:royalty-federation:kazene:royalty-network
+formation:
+  formation_id: urn:royalty-formation:kazene:origin-usage-audit:v0.3
+  record_ref: examples/pass/federation-formation-record.example.yaml
+  resolution_status: resolved
+issued_at: '2026-07-25T17:26:00+09:00'
+plan:
+  plan_id: urn:royalty-reconfiguration-plan:kazene:audit-resilience:v0.5
+  record_ref: examples/pass/federation-reconfiguration-plan.example.yaml
+  resolution_status: resolved
+record_type: federation_cell_replacement_record
+replacement_assignment:
+  assignment_id: urn:royalty-role-assignment:kazene:royalty-lab-reserve:auditor:v0.2
+  record_ref: examples/pass/operational-role-assignment.reserve-auditor.example.yaml
+  resolution_status: resolved
+replacement_effect: cell_replacement_only
+replacement_id: urn:royalty-cell-replacement:kazene:capability-expansion:v0.5
+replacement_mode: permanent
+replacement_status: completed
+schema_version: 0.5.0
+source_node:
+  assignment_id: urn:royalty-role-assignment:kazene:royalty-lab:auditor:v0.2
+  node_id: audit-perimeter
+transfer_scope:
+  capabilities:
+  - audit_records
+  - emergency_suspend
+  - execute_settlement
+  pending_state_refs:
+  - urn:royalty-operational-state:kazene:audit-queue:v0.5
+  route_ids:
+  - urn:royalty-value-route:kazene:origin-routing:v0.3
+visibility: public
