@@ -2,7 +2,7 @@
 """
 Validate Royalty Cell Federation Operations Protocol examples.
 
-Supported v0.1-v0.4 records:
+Supported v0.1-v0.5 records:
 
 - Federation Cell Activation Request
 - Federation Cell Readiness Assessment
@@ -21,6 +21,11 @@ Supported v0.1-v0.4 records:
 - Federation Route Suspension Receipt
 - Federation Cell Recovery Assessment
 - Federation Cell Reactivation Receipt
+- Federation Reconfiguration Plan
+- Federation Cell Replacement Record
+- Federation Capacity Rebalancing Receipt
+- Federation Drill Record
+- Federation Operational Conformance Report
 
 Validation stages:
 
@@ -39,6 +44,7 @@ from __future__ import annotations
 import json
 import sys
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -102,6 +108,21 @@ SCHEMA_PATHS = {
     "federation_cell_reactivation_receipt": (
         ROOT_DIR / "schemas" / "cell-reactivation-receipt.schema.json"
     ),
+    "federation_reconfiguration_plan": (
+        ROOT_DIR / "schemas" / "federation-reconfiguration-plan.schema.json"
+    ),
+    "federation_cell_replacement_record": (
+        ROOT_DIR / "schemas" / "cell-replacement-record.schema.json"
+    ),
+    "federation_capacity_rebalancing_receipt": (
+        ROOT_DIR / "schemas" / "capacity-rebalancing-receipt.schema.json"
+    ),
+    "federation_drill_record": (
+        ROOT_DIR / "schemas" / "federation-drill-record.schema.json"
+    ),
+    "federation_operational_conformance_report": (
+        ROOT_DIR / "schemas" / "operational-conformance-report.schema.json"
+    ),
 }
 
 ID_FIELDS = {
@@ -122,6 +143,11 @@ ID_FIELDS = {
     "federation_route_suspension_receipt": "route_suspension_id",
     "federation_cell_recovery_assessment": "recovery_assessment_id",
     "federation_cell_reactivation_receipt": "reactivation_id",
+    "federation_reconfiguration_plan": "plan_id",
+    "federation_cell_replacement_record": "replacement_id",
+    "federation_capacity_rebalancing_receipt": "rebalance_id",
+    "federation_drill_record": "drill_id",
+    "federation_operational_conformance_report": "report_id",
 }
 
 
@@ -189,6 +215,23 @@ def parse_datetime(value: Any) -> datetime | None:
         return datetime.fromisoformat(normalized)
     except ValueError:
         return None
+
+
+def to_decimal(value: Any) -> Decimal | None:
+    """Convert numeric values to Decimal without float arithmetic."""
+    if isinstance(value, bool):
+        return None
+    if not isinstance(value, (int, float, str, Decimal)):
+        return None
+    try:
+        return Decimal(str(value))
+    except InvalidOperation:
+        return None
+
+
+def decimal_equal(left: Decimal, right: Decimal, tolerance: Decimal) -> bool:
+    """Compare Decimal values with a declared tolerance."""
+    return abs(left - right) <= tolerance
 
 
 def duplicate_values(values: list[str]) -> list[str]:
@@ -3362,6 +3405,429 @@ def cell_reactivation_semantic_errors(
     errors.extend(evidence_semantic_errors(document))
     return errors
 
+
+def reconfiguration_plan_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Federation Reconfiguration Plan semantics."""
+    errors: list[str] = []
+    formation = resolved_record(
+        document.get("formation"), "formation_id",
+        "federation_formation_record", known, "formation", errors,
+    )
+    if formation is not None and formation.get("federation_id") != document.get("federation_id"):
+        errors.append("federation_id: does not match the Formation")
+
+    operations = document.get("proposed_operations", [])
+    operation_ids: list[str] = []
+    node_map: dict[str, dict[str, Any]] = {}
+    if formation is not None:
+        for node in formation.get("participating_nodes", []):
+            if isinstance(node, dict) and isinstance(node.get("node_id"), str):
+                node_map[node["node_id"]] = dict(node)
+
+    if isinstance(operations, list):
+        for index, operation in enumerate(operations):
+            if not isinstance(operation, dict):
+                continue
+            operation_id = operation.get("operation_id")
+            if isinstance(operation_id, str):
+                operation_ids.append(operation_id)
+            operation_type = operation.get("operation_type")
+            target_id = operation.get("target_id")
+            if operation_type in {"remove_node", "replace_assignment", "update_node_status", "update_position"}:
+                if target_id not in node_map:
+                    errors.append(f"proposed_operations[{index}].target_id: Formation node '{target_id}' was not found")
+                    continue
+            if operation_type == "remove_node" and target_id in node_map:
+                node_map.pop(target_id, None)
+            if operation_type == "replace_assignment" and target_id in node_map:
+                source_id = operation.get("source_assignment_id")
+                assignment_ref = node_map[target_id].get("assignment", {})
+                current_id = assignment_ref.get("assignment_id") if isinstance(assignment_ref, dict) else None
+                if source_id != current_id:
+                    errors.append(f"proposed_operations[{index}].source_assignment_id: does not match Formation node")
+                replacement_id = operation.get("replacement_assignment_id")
+                replacement = known["federation_operational_role_assignment"].get(replacement_id)
+                source = known["federation_operational_role_assignment"].get(current_id)
+                if replacement is None:
+                    errors.append(f"proposed_operations[{index}].replacement_assignment_id: local Assignment '{replacement_id}' was not found")
+                else:
+                    if source is not None and source.get("role_type") != replacement.get("role_type"):
+                        errors.append(f"proposed_operations[{index}].replacement_assignment_id: replacement Role type differs from source")
+                    node_map[target_id]["assignment"] = {"assignment_id": replacement_id}
+            if operation_type == "add_node":
+                replacement_id = operation.get("replacement_assignment_id")
+                if not replacement_id:
+                    errors.append(f"proposed_operations[{index}].replacement_assignment_id: required for add_node")
+                elif replacement_id not in known["federation_operational_role_assignment"]:
+                    errors.append(f"proposed_operations[{index}].replacement_assignment_id: local Assignment '{replacement_id}' was not found")
+                elif isinstance(target_id, str):
+                    node_map[target_id] = {"node_id": target_id, "assignment": {"assignment_id": replacement_id}, "node_status": "standby"}
+
+    for operation_id in duplicate_values(operation_ids):
+        errors.append(f"proposed_operations: duplicate operation_id '{operation_id}'")
+
+    role_types: set[str] = set()
+    for node in node_map.values():
+        assignment_ref = node.get("assignment", {})
+        assignment_id = assignment_ref.get("assignment_id") if isinstance(assignment_ref, dict) else None
+        assignment = known["federation_operational_role_assignment"].get(assignment_id)
+        if isinstance(assignment, dict) and isinstance(assignment.get("role_type"), str):
+            role_types.add(assignment["role_type"])
+    for required_role in document.get("required_role_types", []):
+        if required_role not in role_types:
+            errors.append(f"required_role_types: proposed Formation loses required Role '{required_role}'")
+
+    status = document.get("plan_status")
+    if status in {"approved", "executing", "completed"}:
+        if not isinstance(document.get("decision"), dict):
+            errors.append(f"decision: required when plan_status is '{status}'")
+        rollback = document.get("rollback_operations")
+        if not isinstance(rollback, list) or not rollback:
+            errors.append(f"rollback_operations: required when plan_status is '{status}'")
+        if not document.get("rollback_policy_ref"):
+            errors.append(f"rollback_policy_ref: required when plan_status is '{status}'")
+    if status == "approved" and not document.get("approved_at"):
+        errors.append("approved_at: required for approved Plan")
+    if status == "executing" and not document.get("started_at"):
+        errors.append("started_at: required for executing Plan")
+    if status == "completed":
+        if not document.get("completed_at"):
+            errors.append("completed_at: required for completed Plan")
+        if not document.get("execution_refs"):
+            errors.append("execution_refs: required for completed Plan")
+    if status == "cancelled":
+        if not document.get("cancelled_at") or not document.get("status_reason"):
+            errors.append("cancelled_at and status_reason: required for cancelled Plan")
+    if status == "superseded" and not document.get("superseded_by_ref"):
+        errors.append("superseded_by_ref: required for superseded Plan")
+    errors.extend(decision_time_errors(document))
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
+def cell_replacement_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Cell Replacement Record semantics."""
+    errors: list[str] = []
+    plan = resolved_record(document.get("plan"), "plan_id", "federation_reconfiguration_plan", known, "plan", errors)
+    formation = resolved_record(document.get("formation"), "formation_id", "federation_formation_record", known, "formation", errors)
+    replacement = resolved_record(document.get("replacement_assignment"), "assignment_id", "federation_operational_role_assignment", known, "replacement_assignment", errors)
+    if plan is not None and plan.get("plan_status") not in {"approved", "executing", "completed"}:
+        errors.append("plan: replacement requires an approved or executing Reconfiguration Plan")
+    if formation is not None and formation.get("federation_id") != document.get("federation_id"):
+        errors.append("federation_id: does not match the Formation")
+
+    source_node_ref = document.get("source_node", {})
+    source_assignment = None
+    if isinstance(source_node_ref, dict) and formation is not None:
+        node_id = source_node_ref.get("node_id")
+        assignment_id = source_node_ref.get("assignment_id")
+        node = next((n for n in formation.get("participating_nodes", []) if isinstance(n, dict) and n.get("node_id") == node_id), None)
+        if node is None:
+            errors.append(f"source_node.node_id: Formation node '{node_id}' was not found")
+        else:
+            assignment_ref = node.get("assignment", {})
+            current_id = assignment_ref.get("assignment_id") if isinstance(assignment_ref, dict) else None
+            if current_id != assignment_id:
+                errors.append("source_node.assignment_id: does not match the Formation node")
+            source_assignment = known["federation_operational_role_assignment"].get(current_id)
+
+    replacement_id = document.get("replacement_assignment", {}).get("assignment_id") if isinstance(document.get("replacement_assignment"), dict) else None
+    source_id = source_node_ref.get("assignment_id") if isinstance(source_node_ref, dict) else None
+    if replacement_id == source_id:
+        errors.append("replacement_assignment.assignment_id: must differ from source Assignment")
+    if source_assignment is not None and replacement is not None:
+        if source_assignment.get("role_type") != replacement.get("role_type"):
+            errors.append("replacement_assignment: Role type must match source Assignment")
+        source_caps = {v for v in source_assignment.get("assigned_capabilities", []) if isinstance(v, str)}
+        replacement_caps = {v for v in replacement.get("assigned_capabilities", []) if isinstance(v, str)}
+        transferred = {v for v in document.get("transfer_scope", {}).get("capabilities", []) if isinstance(v, str)} if isinstance(document.get("transfer_scope"), dict) else set()
+        for capability in sorted(transferred - source_caps):
+            errors.append(f"transfer_scope.capabilities: capability '{capability}' was not assigned to the source")
+        for capability in sorted(transferred - replacement_caps):
+            errors.append(f"transfer_scope.capabilities: capability '{capability}' is not available on the replacement")
+        if document.get("authority_preservation") == "exact" and source_caps != replacement_caps:
+            errors.append("authority_preservation: exact replacement requires equal capability sets")
+
+    status = document.get("replacement_status")
+    acknowledgements = document.get("acknowledgements", {})
+    if status in {"authorized", "in_progress", "completed"} and not isinstance(document.get("decision"), dict):
+        errors.append(f"decision: required when replacement_status is '{status}'")
+    if status == "completed":
+        for party in ["source", "target", "coordinator"]:
+            ack = acknowledgements.get(party, {}) if isinstance(acknowledgements, dict) else {}
+            if not isinstance(ack, dict) or ack.get("status") != "accepted":
+                errors.append(f"acknowledgements.{party}.status: must be accepted for completed replacement")
+        if not document.get("execution_ref"):
+            errors.append("execution_ref: required for completed replacement")
+        if not document.get("completed_at"):
+            errors.append("completed_at: required for completed replacement")
+    if status == "rolled_back":
+        if not document.get("rollback_ref") or not document.get("rolled_back_at"):
+            errors.append("rollback_ref and rolled_back_at: required for rolled-back replacement")
+    if status == "failed":
+        if not document.get("failed_at") or not document.get("status_reason"):
+            errors.append("failed_at and status_reason: required for failed replacement")
+    errors.extend(decision_time_errors(document))
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
+def capacity_rebalancing_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Capacity Rebalancing Receipt semantics."""
+    errors: list[str] = []
+    plan = resolved_record(document.get("plan"), "plan_id", "federation_reconfiguration_plan", known, "plan", errors)
+    formation = resolved_record(document.get("formation"), "formation_id", "federation_formation_record", known, "formation", errors)
+    if plan is not None and plan.get("plan_status") not in {"approved", "executing", "completed"}:
+        errors.append("plan: capacity rebalancing requires an approved Plan")
+    node_assignments: dict[str, str] = {}
+    if formation is not None:
+        for node in formation.get("participating_nodes", []):
+            if isinstance(node, dict):
+                assignment_ref = node.get("assignment", {})
+                assignment_id = assignment_ref.get("assignment_id") if isinstance(assignment_ref, dict) else None
+                if isinstance(node.get("node_id"), str) and isinstance(assignment_id, str):
+                    node_assignments[node["node_id"]] = assignment_id
+
+    tolerance = Decimal("0")
+    normalization = document.get("normalization", {})
+    if isinstance(normalization, dict):
+        parsed = to_decimal(normalization.get("tolerance"))
+        if parsed is not None:
+            tolerance = parsed
+    distributions: dict[str, dict[str, Decimal]] = {}
+    for field in ["before_distribution", "after_distribution"]:
+        total = Decimal("0")
+        nodes: list[str] = []
+        shares: dict[str, Decimal] = {}
+        values = document.get(field, [])
+        if isinstance(values, list):
+            for index, entry in enumerate(values):
+                if not isinstance(entry, dict):
+                    continue
+                node_id = entry.get("node_id")
+                assignment_id = entry.get("assignment_id")
+                share = to_decimal(entry.get("share"))
+                if isinstance(node_id, str):
+                    nodes.append(node_id)
+                if share is not None:
+                    total += share
+                    if isinstance(node_id, str):
+                        shares[node_id] = share
+                if node_id not in node_assignments:
+                    errors.append(f"{field}[{index}].node_id: Formation node '{node_id}' was not found")
+                elif node_assignments.get(node_id) != assignment_id:
+                    errors.append(f"{field}[{index}].assignment_id: does not match Formation node")
+        for node_id in duplicate_values(nodes):
+            errors.append(f"{field}: duplicate node_id '{node_id}'")
+        if not decimal_equal(total, Decimal("1"), tolerance):
+            errors.append(f"{field}.share: shares must sum to 1; got {total}")
+        distributions[field] = shares
+    if distributions.get("before_distribution") == distributions.get("after_distribution"):
+        errors.append("after_distribution: must differ from before_distribution")
+    status = document.get("rebalance_status")
+    if status in {"approved", "applied"} and not isinstance(document.get("decision"), dict):
+        errors.append(f"decision: required when rebalance_status is '{status}'")
+    if status == "applied" and not document.get("applied_at"):
+        errors.append("applied_at: required for applied Rebalance")
+    if status == "reverted" and not document.get("reverted_at"):
+        errors.append("reverted_at: required for reverted Rebalance")
+    if status == "failed" and (not document.get("failed_at") or not document.get("status_reason")):
+        errors.append("failed_at and status_reason: required for failed Rebalance")
+    errors.extend(decision_time_errors(document))
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
+DRILL_EXECUTION_TYPES = {
+    "reconfiguration_plan": ("federation_reconfiguration_plan", "plan_id"),
+    "cell_replacement": ("federation_cell_replacement_record", "replacement_id"),
+    "capacity_rebalance": ("federation_capacity_rebalancing_receipt", "rebalance_id"),
+    "formation_change": ("federation_formation_change_record", "change_id"),
+    "incident": ("federation_operational_incident_record", "incident_id"),
+    "isolation": ("federation_cell_isolation_order", "isolation_id"),
+    "route_suspension": ("federation_route_suspension_receipt", "route_suspension_id"),
+    "recovery_assessment": ("federation_cell_recovery_assessment", "recovery_assessment_id"),
+    "reactivation": ("federation_cell_reactivation_receipt", "reactivation_id"),
+}
+
+
+def federation_drill_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Federation Drill Record semantics."""
+    errors: list[str] = []
+    resolved_record(document.get("formation"), "formation_id", "federation_formation_record", known, "formation", errors)
+    if document.get("reconfiguration_plan") is not None:
+        resolved_record(document.get("reconfiguration_plan"), "plan_id", "federation_reconfiguration_plan", known, "reconfiguration_plan", errors)
+    if document.get("environment") == "controlled_production":
+        if not document.get("authorization_ref"):
+            errors.append("authorization_ref: required for controlled-production drill")
+        scenario = document.get("scenario", {})
+        if not isinstance(scenario, dict) or scenario.get("protected_live_operations") is not True:
+            errors.append("scenario.protected_live_operations: must be true for controlled-production drill")
+
+    objectives = document.get("objectives", [])
+    objective_map: dict[str, dict[str, Any]] = {}
+    objective_ids: list[str] = []
+    if isinstance(objectives, list):
+        for objective in objectives:
+            if isinstance(objective, dict) and isinstance(objective.get("objective_id"), str):
+                objective_ids.append(objective["objective_id"])
+                objective_map[objective["objective_id"]] = objective
+    for objective_id in duplicate_values(objective_ids):
+        errors.append(f"objectives: duplicate objective_id '{objective_id}'")
+
+    result_ids: list[str] = []
+    result_map: dict[str, str] = {}
+    results = document.get("results", [])
+    if isinstance(results, list):
+        for index, result in enumerate(results):
+            if not isinstance(result, dict):
+                continue
+            objective_id = result.get("objective_id")
+            if isinstance(objective_id, str):
+                result_ids.append(objective_id)
+                result_map[objective_id] = result.get("status")
+                if objective_id not in objective_map:
+                    errors.append(f"results[{index}].objective_id: unknown objective '{objective_id}'")
+    for objective_id in duplicate_values(result_ids):
+        errors.append(f"results: duplicate objective_id '{objective_id}'")
+
+    if document.get("drill_status") == "completed":
+        for objective_id in objective_map:
+            if objective_id not in result_map:
+                errors.append(f"results: completed Drill is missing objective '{objective_id}'")
+        if not document.get("started_at") or not document.get("completed_at"):
+            errors.append("started_at and completed_at: required for completed Drill")
+    if document.get("drill_status") == "aborted" and (not document.get("aborted_at") or not document.get("abort_reason")):
+        errors.append("aborted_at and abort_reason: required for aborted Drill")
+
+    outcome = document.get("outcome")
+    mandatory_statuses = [result_map.get(objective_id) for objective_id, objective in objective_map.items() if objective.get("mandatory") is True]
+    if outcome == "passed" and any(status != "pass" for status in mandatory_statuses):
+        errors.append("outcome: passed requires every mandatory objective to pass")
+    if outcome == "conditionally_passed" and any(status in {"fail", "not_run", None} for status in mandatory_statuses):
+        errors.append("outcome: conditionally_passed cannot contain failed or unrun mandatory objectives")
+    if outcome == "failed" and not any(status == "fail" for status in result_map.values()):
+        errors.append("outcome: failed requires at least one failed result")
+
+    for index, execution in enumerate(document.get("execution_refs", [])):
+        if not isinstance(execution, dict):
+            continue
+        errors.extend(external_reference_errors(execution, f"execution_refs[{index}]"))
+        if execution.get("resolution_status") == "resolved":
+            mapping = DRILL_EXECUTION_TYPES.get(execution.get("record_type"))
+            if mapping is not None and execution.get("record_id") not in known[mapping[0]]:
+                errors.append(f"execution_refs[{index}].record_id: local record '{execution.get('record_id')}' was not found")
+    scheduled = parse_datetime(document.get("scheduled_at"))
+    started = parse_datetime(document.get("started_at"))
+    completed = parse_datetime(document.get("completed_at"))
+    if scheduled and started and started < scheduled:
+        errors.append("started_at: must not be earlier than scheduled_at")
+    if started and completed and completed < started:
+        errors.append("completed_at: must not be earlier than started_at")
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
+
+CONFORMANCE_RECORD_TYPES = {
+    "activation_request": ("federation_cell_activation_request", "request_id"),
+    "readiness_assessment": ("federation_cell_readiness_assessment", "assessment_id"),
+    "activation_receipt": ("federation_cell_activation_receipt", "receipt_id"),
+    "role_assignment": ("federation_operational_role_assignment", "assignment_id"),
+    "authority_binding": ("federation_authority_scope_binding", "binding_id"),
+    "formation": ("federation_formation_record", "formation_id"),
+    "route_decision": ("federation_cell_route_decision_receipt", "route_decision_id"),
+    "value_flow_route": ("federation_value_flow_route", "route_id"),
+    "incident": ("federation_operational_incident_record", "incident_id"),
+    "isolation": ("federation_cell_isolation_order", "isolation_id"),
+    "route_suspension": ("federation_route_suspension_receipt", "route_suspension_id"),
+    "recovery_assessment": ("federation_cell_recovery_assessment", "recovery_assessment_id"),
+    "reactivation": ("federation_cell_reactivation_receipt", "reactivation_id"),
+    "reconfiguration_plan": ("federation_reconfiguration_plan", "plan_id"),
+    "cell_replacement": ("federation_cell_replacement_record", "replacement_id"),
+    "capacity_rebalance": ("federation_capacity_rebalancing_receipt", "rebalance_id"),
+    "federation_drill": ("federation_drill_record", "drill_id"),
+}
+
+
+def operational_conformance_semantic_errors(
+    document: dict[str, Any],
+    known: KnownRecords,
+) -> list[str]:
+    """Validate Operational Conformance Report semantics."""
+    errors: list[str] = []
+    resolved_record(document.get("formation"), "formation_id", "federation_formation_record", known, "formation", errors)
+    evaluated = document.get("evaluated_records", [])
+    evaluated_keys: list[str] = []
+    evaluated_types: set[str] = set()
+    if isinstance(evaluated, list):
+        for index, item in enumerate(evaluated):
+            if not isinstance(item, dict):
+                continue
+            record_type = item.get("record_type")
+            record_id = item.get("record_id")
+            if isinstance(record_type, str) and isinstance(record_id, str):
+                evaluated_keys.append(f"{record_type}|{record_id}")
+                evaluated_types.add(record_type)
+            errors.extend(external_reference_errors(item, f"evaluated_records[{index}]"))
+            if item.get("resolution_status") == "resolved":
+                mapping = CONFORMANCE_RECORD_TYPES.get(record_type)
+                if mapping is not None and record_id not in known[mapping[0]]:
+                    errors.append(f"evaluated_records[{index}].record_id: local record '{record_id}' was not found")
+    for key in duplicate_values(evaluated_keys):
+        errors.append(f"evaluated_records: duplicate record '{key}'")
+
+    check_ids: list[str] = []
+    required_statuses: list[str] = []
+    checks = document.get("checks", [])
+    if isinstance(checks, list):
+        for check in checks:
+            if not isinstance(check, dict):
+                continue
+            if isinstance(check.get("check_id"), str):
+                check_ids.append(check["check_id"])
+            if check.get("required") is True and isinstance(check.get("status"), str):
+                required_statuses.append(check["status"])
+    for check_id in duplicate_values(check_ids):
+        errors.append(f"checks: duplicate check_id '{check_id}'")
+
+    status = document.get("conformance_status")
+    if status == "conformant":
+        for required_type in {"reconfiguration_plan", "cell_replacement", "capacity_rebalance", "federation_drill"}:
+            if required_type not in evaluated_types:
+                errors.append(f"evaluated_records: conformant v0.5 report requires '{required_type}'")
+        if any(value != "pass" for value in required_statuses):
+            errors.append("checks: conformant report requires every required check to pass")
+    if status == "conditionally_conformant":
+        if any(value in {"fail", "not_assessed"} for value in required_statuses):
+            errors.append("checks: conditionally conformant report cannot contain failed or unassessed required checks")
+        if not document.get("exceptions"):
+            errors.append("exceptions: required for conditional conformance")
+    if status == "nonconformant":
+        if not document.get("findings") or not document.get("remediation_actions"):
+            errors.append("findings and remediation_actions: required for nonconformant report")
+    if status == "incomplete" and not any(value == "not_assessed" for value in required_statuses):
+        errors.append("checks: incomplete report requires at least one unassessed required check")
+    if document.get("report_status") == "superseded" and not document.get("superseded_by_ref"):
+        errors.append("superseded_by_ref: required for superseded report")
+    assessed = parse_datetime(document.get("assessed_at"))
+    valid_until = parse_datetime(document.get("valid_until"))
+    if assessed and valid_until and valid_until < assessed:
+        errors.append("valid_until: must not be earlier than assessed_at")
+    errors.extend(evidence_semantic_errors(document))
+    return errors
+
 def semantic_errors(
     document: dict[str, Any],
     known: KnownRecords,
@@ -3419,6 +3885,21 @@ def semantic_errors(
 
     if record_type == "federation_cell_reactivation_receipt":
         return cell_reactivation_semantic_errors(document, known)
+
+    if record_type == "federation_reconfiguration_plan":
+        return reconfiguration_plan_semantic_errors(document, known)
+
+    if record_type == "federation_cell_replacement_record":
+        return cell_replacement_semantic_errors(document, known)
+
+    if record_type == "federation_capacity_rebalancing_receipt":
+        return capacity_rebalancing_semantic_errors(document, known)
+
+    if record_type == "federation_drill_record":
+        return federation_drill_semantic_errors(document, known)
+
+    if record_type == "federation_operational_conformance_report":
+        return operational_conformance_semantic_errors(document, known)
 
     return [
         f"record_type: no semantic validator for '{record_type}'"
